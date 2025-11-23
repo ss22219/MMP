@@ -1,0 +1,74 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- <PackageReference Include="SharpDX.DirectInput" Version="4.2.0" />
+    <PackageReference Include="SharpDX.XInput" Version="4.2.0" /> -->
+    <PackageReference Include="System.Drawing.Common" Version="10.0.0" />
+    <!-- <PackageReference Include="Sdcb.PaddleOCR" Version="3.0.1" /> -->
+    <!-- <PackageReference Include="Sdcb.PaddleOCR.Models.Local" Version="3.0.1" /> -->
+    <!-- <PackageReference Include="Sdcb.PaddleOCR.Models.LocalV5" Version="3.0.0" /> -->
+    <!-- <PackageReference Include="Sdcb.PaddleInference" Version="3.0.1" /> -->
+    <!-- <PackageReference Include="Sdcb.PaddleDetection" Version="2.3.3.1" /> -->
+    <!-- CPU 运行时 (Mkldnn) - 默认使用 -->
+    <!-- <PackageReference Include="Sdcb.PaddleInference.runtime.win64.mkl" Version="3.1.0.54" /> -->
+    <!-- <PackageReference Include="Sdcb.PaddleInference.runtime.win64.cu129_cudnn910_sm89" Version="3.1.0.54" /> -->
+    <!-- <PackageReference Include="OpenCvSharp4" Version="4.11.0.20250507" /> -->
+    <!-- <PackageReference Include="OpenCvSharp4.runtime.win" Version="4.11.0.20250507" /> -->
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="RapidOCR.Net\RapidOcrNet\RapidOcrNet.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 编译时自动复制 models 目录到输出目录 -->
+    <None Include="models\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 排除 test_simple 目录中的所有 .cs 文件 -->
+    <Compile Remove="test_simple\**\*.cs" />
+    <Compile Remove="resource\**\*.cs" />
+    <None Include="test_simple\**\*.cs" />
+    
+    <!-- 排除 test 目录 -->
+    <Compile Remove="test\**\*" />
+    <None Remove="test\**\*" />
+    <Content Remove="test\**\*" />
+    <EmbeddedResource Remove="test\**\*" />
+    
+    <!-- 排除 UE4.27.2 目录 -->
+    <Compile Remove="RapidOCR.Net\**\*" />
+    <Compile Remove="UE4.27.2\**\*" />
+    <None Remove="UE4.27.2\**\*" />
+    <Content Remove="UE4.27.2\**\*" />
+    <EmbeddedResource Remove="UE4.27.2\**\*" />
+    
+    <!-- 排除 Dumper-7 目录 -->
+    <Compile Remove="Dumper-7\**\*" />
+    <None Remove="Dumper-7\**\*" />
+    <Content Remove="Dumper-7\**\*" />
+    <EmbeddedResource Remove="Dumper-7\**\*" />
+    
+    <!-- 排除 ida-pro-mcp 目录 -->
+    <Compile Remove="ida-pro-mcp\**\*" />
+    <None Remove="ida-pro-mcp\**\*" />
+    <Content Remove="ida-pro-mcp\**\*" />
+    <EmbeddedResource Remove="ida-pro-mcp\**\*" />
+    
+    <!-- 排除 cheat-engine-server-python 目录 -->
+    <Compile Remove="cheat-engine-server-python\**\*" />
+    <None Remove="cheat-engine-server-python\**\*" />
+    <Content Remove="cheat-engine-server-python\**\*" />
+    <EmbeddedResource Remove="cheat-engine-server-python\**\*" />
+  </ItemGroup>
+
+</Project>

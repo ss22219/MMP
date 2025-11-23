@@ -1,0 +1,76 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFrameworks>net9.0-windows;</TargetFrameworks>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<IsAotCompatible>true</IsAotCompatible>
+		<IsTrimmable>true</IsTrimmable>
+		<EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	
+		<!-- NuGet Package Information -->
+		<PackageId>RapidOCR.Net</PackageId>
+		<Authors>BobLd;ElderJames</Authors>
+		<Description>RapidOCR implementation for .NET - Windows OCR processing using PaddleOCR ONNX models. Based on RapidAI's RapidOCR</Description>
+		<PackageTags>ocr;paddleocr;rapidocr;text-recognition;text-detection;windows</PackageTags>
+		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+		<PackageProjectUrl>https://github.com/ElderJames/RapidOCR.Net</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/ElderJames/RapidOCR.Net</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Clipper2" Version="1.4.0" />
+		<PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.23.0" />
+		<PackageReference Include="System.Drawing.Common" Version="9.0.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="../README.md" Pack="true" PackagePath="/" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Update="models\ch_ppocr_mobile_v2.0_cls_infer.onnx">
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</None>
+		<None Update="models\ch_ppocr_mobile_v2.0_cls_infer_fp16.onnx">
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</None>
+		<None Update="models\ch_ppocr_mobile_v2.0_cls_infer_fp16_opt.onnx">
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</None>
+		<None Update="models\ch_ppocr_mobile_v2.0_cls_infer_opt.onnx">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="models\en_dict.txt">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="models\en_PP-OCRv3_det_infer.onnx">
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</None>
+		<None Update="models\en_PP-OCRv3_det_infer_fp16.onnx">
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</None>
+		<None Update="models\en_PP-OCRv3_det_infer_fp16_opt.onnx">
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</None>
+		<None Update="models\en_PP-OCRv3_det_infer_opt.onnx">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="models\en_PP-OCRv3_rec_infer.onnx">
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</None>
+		<None Update="models\en_PP-OCRv3_rec_infer_fp16.onnx">
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</None>
+		<None Update="models\en_PP-OCRv3_rec_infer_fp16_opt.onnx">
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</None>
+		<None Update="models\en_PP-OCRv3_rec_infer_opt.onnx">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+
+</Project>
