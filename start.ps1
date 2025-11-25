@@ -124,7 +124,7 @@ function Do-Update {
         git stash 2>$null | Out-Null
         
         Write-Host "正在拉取最新代码..." -ForegroundColor Yellow
-        git pull origin master
+        git pull https://gitee.com/gool/MMP
         
         if ($LASTEXITCODE -eq 0) {
             git stash pop 2>$null | Out-Null
@@ -140,7 +140,7 @@ function Do-Update {
         }
         else {
             Write-Host "✗ 更新失败" -ForegroundColor Red
-            Write-Host "请尝试手动更新: git pull origin master" -ForegroundColor Yellow
+            Write-Host "请尝试手动更新: git pull https://gitee.com/gool/MMP" -ForegroundColor Yellow
         }
     }
     else {
