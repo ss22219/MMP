@@ -38,7 +38,8 @@
     <Compile Remove="test_simple\**\*.cs" />
     <Compile Remove="resource\**\*.cs" />
     <None Include="test_simple\**\*.cs" />
-    
+    <None Include="OcrEngine_CUDA.cs" />
+    <Compile Remove="OcrEngine_CUDA.cs" />
     <!-- 排除 test 目录 -->
     <Compile Remove="test\**\*" />
     <None Remove="test\**\*" />

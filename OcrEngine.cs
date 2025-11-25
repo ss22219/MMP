@@ -103,24 +103,78 @@ namespace MMP
             if (_ocr == null)
                 throw new InvalidOperationException("OCR 引擎未初始化，请先调用 Initialize()");
 
-            // 执行 OCR
-            var rapidResult = _ocr.Detect(bitmap, _options);
-
-            // 转换结果
-            var result = new OcrResult();
-            foreach (var block in rapidResult.TextBlocks)
+            if (bitmap == null)
             {
-                var textRegion = new OcrTextRegion
-                {
-                    Text = block.GetText(),
-                    Confidence = block.BoxScore,
-                    Center = CalculateCenter(block.BoxPoints),
-                    BoundingBox = ConvertPoints(block.BoxPoints)
-                };
-                result.Regions.Add(textRegion);
+                Console.WriteLine("[OcrEngine] 警告: bitmap 为 null，返回空结果");
+                return new OcrResult();
             }
 
-            return result;
+            // 验证 bitmap 的有效性
+            if (bitmap.Width <= 0 || bitmap.Height <= 0)
+            {
+                Console.WriteLine($"[OcrEngine] 警告: bitmap 尺寸无效 ({bitmap.Width}x{bitmap.Height})，返回空结果");
+                return new OcrResult();
+            }
+
+            try
+            {
+                // 尝试访问 bitmap 数据以确保它是有效的
+                var pixelFormat = bitmap.PixelFormat;
+                Console.WriteLine($"[OcrEngine] 开始识别 {bitmap.Width}x{bitmap.Height} 图像，格式: {pixelFormat}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[OcrEngine] 警告: bitmap 数据无效: {ex.Message}");
+                return new OcrResult();
+            }
+
+            try
+            {
+                // 执行 OCR
+                var rapidResult = _ocr.Detect(bitmap, _options);
+
+                if (rapidResult == null || rapidResult.TextBlocks == null)
+                {
+                    Console.WriteLine("[OcrEngine] 警告: OCR 返回结果为 null");
+                    return new OcrResult();
+                }
+
+                // 转换结果
+                var result = new OcrResult();
+                foreach (var block in rapidResult.TextBlocks)
+                {
+                    if (block == null || block.BoxPoints == null || block.BoxPoints.Length == 0)
+                    {
+                        Console.WriteLine("[OcrEngine] 警告: 跳过无效的文本块");
+                        continue;
+                    }
+
+                    try
+                    {
+                        var textRegion = new OcrTextRegion
+                        {
+                            Text = block.GetText() ?? string.Empty,
+                            Confidence = block.BoxScore,
+                            Center = CalculateCenter(block.BoxPoints),
+                            BoundingBox = ConvertPoints(block.BoxPoints)
+                        };
+                        result.Regions.Add(textRegion);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[OcrEngine] 警告: 处理文本块时出错: {ex.Message}");
+                        continue;
+                    }
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[OcrEngine] OCR 识别失败: {ex.Message}");
+                Console.WriteLine($"[OcrEngine] 堆栈跟踪:\n{ex.StackTrace}");
+                return new OcrResult();
+            }
         }
 
         /// <summary>

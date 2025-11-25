@@ -141,26 +141,47 @@ namespace MMP
             PrintWindow(hWnd, hdcDest, 0x00000002);
 
             // Convert to Bitmap
-            Bitmap fullBitmap = Image.FromHbitmap(hBitmap);
-
-            // Cleanup GDI objects
-            SelectObject(hdcDest, hOld);
-            DeleteObject(hBitmap);
-            DeleteDC(hdcDest);
-            ReleaseDC(hWnd, hdcSrc);
-
-            // Extract client area from full window capture
-            Bitmap clientBitmap = new Bitmap(clientWidth, clientHeight, PixelFormat.Format32bppArgb);
-            using (Graphics graphics = Graphics.FromImage(clientBitmap))
+            Bitmap? fullBitmap = null;
+            Bitmap? clientBitmap = null;
+            
+            try
             {
-                graphics.DrawImage(fullBitmap,
-                    new Rectangle(0, 0, clientWidth, clientHeight),
-                    new Rectangle(borderLeft, borderTop, clientWidth, clientHeight),
-                    GraphicsUnit.Pixel);
-            }
+                fullBitmap = Image.FromHbitmap(hBitmap);
+                
+                if (fullBitmap == null || fullBitmap.Width <= 0 || fullBitmap.Height <= 0)
+                {
+                    Console.WriteLine($"[ScreenCapture] 警告: fullBitmap 无效");
+                    return null;
+                }
 
-            fullBitmap.Dispose();
-            return clientBitmap;
+                // Extract client area from full window capture
+                clientBitmap = new Bitmap(clientWidth, clientHeight, PixelFormat.Format32bppArgb);
+                using (Graphics graphics = Graphics.FromImage(clientBitmap))
+                {
+                    graphics.DrawImage(fullBitmap,
+                        new Rectangle(0, 0, clientWidth, clientHeight),
+                        new Rectangle(borderLeft, borderTop, clientWidth, clientHeight),
+                        GraphicsUnit.Pixel);
+                }
+
+                return clientBitmap;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ScreenCapture] 截图转换失败: {ex.Message}");
+                Console.WriteLine($"[ScreenCapture] 堆栈跟踪:\n{ex.StackTrace}");
+                clientBitmap?.Dispose();
+                return null;
+            }
+            finally
+            {
+                // Cleanup GDI objects
+                SelectObject(hdcDest, hOld);
+                DeleteObject(hBitmap);
+                DeleteDC(hdcDest);
+                ReleaseDC(hWnd, hdcSrc);
+                fullBitmap?.Dispose();
+            }
         }
 
         /// <summary>

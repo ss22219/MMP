@@ -201,6 +201,11 @@ public class BattleEntitiesAPI
     private IntPtr moduleBase;
     private IntPtr gNamesAddress;
     private OffsetFinder? offsetFinder;
+    
+    // 实体缓存（100ms）
+    private List<EntityInfo>? _cachedEntities = null;
+    private DateTime _lastCacheTime = DateTime.MinValue;
+    private const int CACHE_DURATION_MS = 100;
 
     public BattleEntitiesAPI(string processName)
     {
@@ -652,9 +657,24 @@ public class BattleEntitiesAPI
         return components;
     }
 
-    // 主API：获取 Battle.Entities
+    /// <summary>
+    /// 清除实体缓存，强制下次调用重新读取
+    /// </summary>
+    public void ClearEntitiesCache()
+    {
+        _cachedEntities = null;
+        _lastCacheTime = DateTime.MinValue;
+    }
+
+    // 主API：获取 Battle.Entities（带100ms缓存）
     public List<EntityInfo> GetBattleEntities()
     {
+        // 检查缓存是否有效
+        if (_cachedEntities != null && (DateTime.Now - _lastCacheTime).TotalMilliseconds < CACHE_DURATION_MS)
+        {
+            return _cachedEntities;
+        }
+
         List<EntityInfo> entities = new List<EntityInfo>();
 
         try
@@ -793,6 +813,10 @@ public class BattleEntitiesAPI
         {
             Console.WriteLine($"❌ 错误: {ex.Message}");
         }
+
+        // 更新缓存
+        _cachedEntities = entities;
+        _lastCacheTime = DateTime.Now;
 
         return entities;
     }

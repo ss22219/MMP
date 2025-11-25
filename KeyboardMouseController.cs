@@ -392,8 +392,18 @@ namespace MMP
 
         private void DoClick(int x, int y, double downTime, string key)
         {
+            Debug.WriteLine($"[KeyboardMouseController] Click {x}, {y} {downTime}");
+            
+            // 前台模式：先设置鼠标位置
+            if (!_backgroundMode && x >= 0 && y >= 0)
+            {
+                Point absPos = new() { X = x, Y = y };
+                ClientToScreen(_hwnd, ref absPos);
+                SetCursorPos(absPos.X, absPos.Y);
+                Thread.Sleep(50); // 等待鼠标移动到位
+            }
+            
             IntPtr clickPos = MakeMousePosition(x, y);
-            Debug.WriteLine($"[KeyboardMouseController] Click {x}, {y}, {clickPos:X} {downTime}");
             
             uint btnDown, btnMk, btnUp;
             if (key == "left")
