@@ -57,49 +57,125 @@ Write-Host ""
 # 步骤 1: 检查更新
 Write-Host "步骤 1/5: 检查更新..." -ForegroundColor Yellow
 try {
-    $tags = Invoke-RestMethod -Uri "https://gitee.com/api/v5/repos/gool/MMP/tags" -UseBasicParsing
+    $tags = Invoke-RestMethod -Uri "https://gitee.com/api/v5/repos/gool/MMP/tags" -UseBasicParsing -TimeoutSec 5
     if ($tags.Count -gt 0) {
-        $latestVersion = $tags[0].name
+        # 找到真正的最新版本（按版本号排序）
+        $latestTag = $tags | Sort-Object { 
+            $v = $_.name -replace "^v", ""
+            $parts = $v.Split(".")
+            [int]$parts[0] * 10000 + [int]$parts[1] * 100 + [int]$parts[2]
+        } -Descending | Select-Object -First 1
+        
+        $latestVersion = $latestTag.name
         Write-Host "最新版本: $latestVersion"
         
-        if ($currentVersion -ne $latestVersion) {
-            Write-Host ""
-            Write-Host "========================================" -ForegroundColor Green
-            Write-Host "   发现新版本！" -ForegroundColor Green
-            Write-Host "========================================" -ForegroundColor Green
-            Write-Host "当前版本: $currentVersion"
-            Write-Host "最新版本: $latestVersion"
-            Write-Host ""
-            Write-Host "是否更新？"
-            Write-Host "  1. 是 (推荐)"
-            Write-Host "  2. 否 (跳过更新)"
-            Write-Host ""
-            $updateChoice = Read-Host "请输入选项 (1/2)"
-            
-            if ($updateChoice -eq "1") {
-                if (Get-Command git -ErrorAction SilentlyContinue) {
-                    Write-Host "正在更新..." -ForegroundColor Yellow
-                    git stash | Out-Null
-                    git pull origin main
-                    git stash pop | Out-Null
-                    Write-Host "更新完成！请重新运行此脚本" -ForegroundColor Green
-                    pause
-                    exit 0
-                } else {
-                    Write-Host "未安装 Git，请手动更新" -ForegroundColor Red
-                    Start-Process "https://gitee.com/gool/MMP/releases"
-                    pause
-                    exit 0
+        # 比较版本
+        if ($currentVersion -eq $latestVersion) {
+            Write-Host "✓ 已是最新版本" -ForegroundColor Green
+        }
+        else {
+            # 使用版本比较函数
+            $comparison = Compare-Versions $currentVersion $latestVersion
+            if ($comparison -gt 0) {
+                Write-Host "✓ 当前版本更新 ($currentVersion > $latestVersion)" -ForegroundColor Green
+            }
+            else {
+                # 发现新版本
+                Write-Host ""
+                Write-Host "========================================" -ForegroundColor Green
+                Write-Host "   发现新版本！" -ForegroundColor Green
+                Write-Host "========================================" -ForegroundColor Green
+                Write-Host "当前版本: $currentVersion" -ForegroundColor Yellow
+                Write-Host "最新版本: $latestVersion" -ForegroundColor Green
+                Write-Host ""
+                Write-Host "是否更新？" -ForegroundColor Yellow
+                Write-Host "  1. 是 (推荐)" -ForegroundColor White
+                Write-Host "  2. 否 (跳过更新)" -ForegroundColor White
+                Write-Host ""
+                $updateChoice = Read-Host "请输入选项 (1/2)"
+                
+                if ($updateChoice -eq "1") {
+                    if (Get-Command git -ErrorAction SilentlyContinue) {
+                        Write-Host ""
+                        Write-Host "正在更新..." -ForegroundColor Yellow
+                        git stash 2>$null | Out-Null
+                        git pull origin main
+                        
+                        if ($LASTEXITCODE -eq 0) {
+                            git stash pop 2>$null | Out-Null
+                            Write-Host ""
+                            Write-Host "✓ 更新完成！" -ForegroundColor Green
+                            Write-Host ""
+                            Write-Host "更新内容:" -ForegroundColor Cyan
+                            git log --oneline -5
+                            Write-Host ""
+                            Write-Host "请重新运行此脚本以使用新版本" -ForegroundColor Yellow
+                            pause
+                            exit 0
+                        }
+                        else {
+                            Write-Host "✗ 更新失败" -ForegroundColor Red
+                            Write-Host "请尝试手动更新: git pull origin main" -ForegroundColor Yellow
+                        }
+                    }
+                    else {
+                        Write-Host "✗ 未安装 Git" -ForegroundColor Red
+                        Write-Host ""
+                        Write-Host "请选择更新方式:" -ForegroundColor Yellow
+                        Write-Host "  1. 手动下载更新 (打开 Gitee 页面)" -ForegroundColor White
+                        Write-Host "  2. 跳过更新" -ForegroundColor White
+                        Write-Host ""
+                        $gitChoice = Read-Host "请输入选项 (1/2)"
+                        
+                        if ($gitChoice -eq "1") {
+                            Start-Process "https://gitee.com/gool/MMP/releases"
+                            Write-Host "请手动下载最新版本并解压替换" -ForegroundColor Yellow
+                            pause
+                            exit 0
+                        }
+                    }
+                }
+                else {
+                    Write-Host "跳过更新" -ForegroundColor Yellow
                 }
             }
-        } else {
-            Write-Host "已是最新版本" -ForegroundColor Green
         }
     }
-} catch {
-    Write-Host "无法检查更新" -ForegroundColor Yellow
+    else {
+        Write-Host "⚠ 未找到版本信息" -ForegroundColor Yellow
+    }
+}
+catch {
+    Write-Host "⚠ 无法检查更新: $($_.Exception.Message)" -ForegroundColor Yellow
 }
 Write-Host ""
+
+# Version comparison function
+function Compare-Versions {
+    param(
+        [string]$version1,
+        [string]$version2
+    )
+    
+    # Remove v prefix
+    $v1 = $version1 -replace "^v", ""
+    $v2 = $version2 -replace "^v", ""
+    
+    # Split version numbers
+    $v1Parts = $v1.Split(".")
+    $v2Parts = $v2.Split(".")
+    
+    # Compare each part
+    for ($i = 0; $i -lt [Math]::Max($v1Parts.Length, $v2Parts.Length); $i++) {
+        $v1Part = if ($i -lt $v1Parts.Length) { [int]$v1Parts[$i] } else { 0 }
+        $v2Part = if ($i -lt $v2Parts.Length) { [int]$v2Parts[$i] } else { 0 }
+        
+        if ($v1Part -gt $v2Part) { return 1 }
+        if ($v1Part -lt $v2Part) { return -1 }
+    }
+    
+    return 0
+}
 
 # 步骤 2: 检查 CUDA 环境
 Write-Host "步骤 2/5: 检查 CUDA 环境..." -ForegroundColor Yellow
@@ -362,7 +438,7 @@ Write-Host "  - 使用 CUDA 加速进行 OCR 识别"
 Write-Host ""
 
 # 运行程序
-dotnet run --project MMP_CUDA.csproj -c Release --no-build
+dotnet run --project MMP_CUDA.csproj -c Release
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan

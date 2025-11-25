@@ -1,35 +1,35 @@
-@echo off
+﻿@echo off
 chcp 65001 >nul
 
 echo ========================================
-echo    MMP CUDA 启动器
+echo    MMP CUDA Launcher
 echo ========================================
 echo.
 
-:: 获取批处理文件所在目录
+:: Get batch file directory
 set "SCRIPT_DIR=%~dp0"
 cd /d "%SCRIPT_DIR%"
 
-:: 查找项目根目录
-echo 正在查找项目根目录...
+:: Find project root directory
+echo Finding project root directory...
 
-:: 检查当前目录
+:: Check current directory
 if exist "MMP_CUDA.csproj" (
-    echo 找到项目根目录: %CD%
+    echo Found project root: %CD%
     goto :found_project
 )
 
-:: 检查父目录
+:: Check parent directory
 cd ..
 if exist "MMP_CUDA.csproj" (
-    echo 找到项目根目录: %CD%
+    echo Found project root: %CD%
     goto :found_project
 )
 
-:: 检查父父目录
+:: Check parent parent directory
 cd ..
 if exist "MMP_CUDA.csproj" (
-    echo 找到项目根目录: %CD%
+    echo Found project root: %CD
     goto :found_project
 )
 
