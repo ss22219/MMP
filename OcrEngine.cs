@@ -1,6 +1,5 @@
 using System.Drawing;
 using RapidOcrNet;
-using PointI = System.Drawing.Point;
 
 namespace MMP
 {

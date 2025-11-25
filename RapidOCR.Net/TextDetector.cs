@@ -74,7 +74,7 @@ namespace RapidOcrNet
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine(ex.Message + ex.StackTrace);
+                Console.WriteLine(ex.Message + ex.StackTrace);
             }
 
             return null;
@@ -241,6 +241,12 @@ namespace RapidOcrNet
         private static PointF[] GetMiniBox(PointF[] contours, out float minEdgeSize)
         {
             PointF[] points = GeometryExtensions.MinimumAreaRectangle(contours);
+
+            if (points == null || points.Length < 4)
+            {
+                minEdgeSize = 0;
+                return points ?? Array.Empty<PointF>();
+            }
 
             GeometryExtensions.GetSize(points, out float width, out float height);
             minEdgeSize = MathF.Min(width, height);

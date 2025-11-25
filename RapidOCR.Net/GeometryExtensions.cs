@@ -268,6 +268,13 @@ namespace RapidOcrNet
 
         public static void GetSize(PointF[] points, out float width, out float height)
         {
+            if (points == null || points.Length < 4)
+            {
+                width = 0;
+                height = 0;
+                return;
+            }
+
             PointF topLeft = points[0];
             //PointF topRight = points[1];
             PointF bottomLeft = points[2];

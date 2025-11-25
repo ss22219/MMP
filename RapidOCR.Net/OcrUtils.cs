@@ -86,7 +86,10 @@ namespace RapidOcrNet
         {
             for (int i = 0; i < textBoxes.Count; ++i)
             {
-                yield return GetRotateCropImage(src, textBoxes[i].Points);
+                if (textBoxes[i]?.Points != null && textBoxes[i].Points.Length == 4)
+                {
+                    yield return GetRotateCropImage(src, textBoxes[i].Points);
+                }
             }
         }
 

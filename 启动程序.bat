@@ -7,8 +7,21 @@ echo    MMP 自动启动脚本
 echo ========================================
 echo.
 
+:: 读取当前版本
+set "CURRENT_VERSION=unknown"
+if exist "version.txt" (
+    set /p CURRENT_VERSION=<version.txt
+)
+echo 当前版本: %CURRENT_VERSION%
+echo.
+
+:: 检查更新
+echo [1/4] 检查更新...
+call :check_update
+echo.
+
 :: 检查 .NET SDK 是否已安装
-echo [1/3] 检查 .NET SDK...
+echo [2/4] 检查 .NET SDK...
 dotnet --version >nul 2>&1
 if errorlevel 1 (
     echo ✗ 未检测到 .NET SDK
@@ -29,7 +42,7 @@ echo.
 
 :install_dotnet
 echo.
-echo [2/3] 准备安装 .NET 10 SDK...
+echo [3/4] 准备安装 .NET 10 SDK...
 echo.
 echo 请选择安装方式:
 echo   1. 自动下载并安装 (推荐)
@@ -135,7 +148,7 @@ exit /b 0
 
 :build_and_run
 echo.
-echo [3/3] 编译并运行 MMP...
+echo [4/4] 编译并运行 MMP...
 echo.
 
 :: 检查项目文件是否存在
@@ -178,3 +191,119 @@ echo ========================================
 echo    程序已退出
 echo ========================================
 pause
+exit /b 0
+
+:: ========================================
+:: 版本检查和更新函数
+:: ========================================
+
+:check_update
+:: 从 Gitee API 获取最新版本
+set "API_URL=https://gitee.com/api/v5/repos/gool/MMP/tags"
+set "TEMP_JSON=%TEMP%\mmp_tags.json"
+
+:: 使用 PowerShell 获取版本信息
+powershell -Command "try { $tags = Invoke-RestMethod -Uri '%API_URL%' -UseBasicParsing; if ($tags.Count -gt 0) { $tags[0].name } else { 'unknown' } } catch { 'error' }" > "%TEMP%\mmp_latest_version.txt" 2>nul
+
+if not exist "%TEMP%\mmp_latest_version.txt" (
+    echo ⚠ 无法检查更新
+    exit /b 0
+)
+
+set /p LATEST_VERSION=<"%TEMP%\mmp_latest_version.txt"
+
+if "%LATEST_VERSION%"=="error" (
+    echo ⚠ 无法连接到更新服务器
+    exit /b 0
+)
+
+if "%LATEST_VERSION%"=="unknown" (
+    echo ⚠ 未找到版本信息
+    exit /b 0
+)
+
+echo 最新版本: %LATEST_VERSION%
+
+:: 比较版本
+if "%CURRENT_VERSION%"=="%LATEST_VERSION%" (
+    echo ✓ 已是最新版本
+    exit /b 0
+)
+
+echo.
+echo ========================================
+echo    发现新版本！
+echo ========================================
+echo 当前版本: %CURRENT_VERSION%
+echo 最新版本: %LATEST_VERSION%
+echo.
+echo 是否更新？
+echo   1. 是 (推荐)
+echo   2. 否 (跳过更新)
+echo.
+set /p update_choice="请输入选项 (1/2): "
+
+if not "%update_choice%"=="1" (
+    echo 跳过更新
+    exit /b 0
+)
+
+:: 执行更新
+call :do_update
+exit /b 0
+
+:do_update
+echo.
+echo 正在更新...
+echo.
+
+:: 检查是否安装了 git
+git --version >nul 2>&1
+if errorlevel 1 (
+    echo ✗ 未安装 Git
+    echo.
+    echo 请选择更新方式:
+    echo   1. 手动下载更新 (打开 Gitee 页面)
+    echo   2. 跳过更新
+    echo.
+    set /p git_choice="请输入选项 (1/2): "
+    
+    if "%git_choice%"=="1" (
+        start https://gitee.com/gool/MMP/releases
+        echo 请手动下载最新版本并解压替换
+        pause
+    )
+    exit /b 0
+)
+
+:: 保存当前更改
+echo 正在保存当前更改...
+git stash >nul 2>&1
+
+:: 拉取最新代码
+echo 正在拉取最新代码...
+git pull origin main
+
+if errorlevel 1 (
+    echo ✗ 更新失败
+    echo.
+    echo 请尝试手动更新:
+    echo   git pull origin main
+    echo.
+    pause
+    exit /b 1
+)
+
+:: 恢复保存的更改
+git stash pop >nul 2>&1
+
+echo.
+echo ✓ 更新完成！
+echo.
+echo 更新内容:
+git log --oneline -5
+
+echo.
+echo 请重新运行此脚本以使用新版本
+pause
+exit /b 0
