@@ -278,11 +278,11 @@
                                 <TextBlock Grid.Row="0" Grid.Column="2" Text="5米内用简单跳跃 (默认 500)" 
                                            FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
 
-                                <TextBlock Grid.Row="1" Grid.Column="0" Text="交互跳跃距离:" 
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="F交互距离:" 
                                            FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
-                                <TextBox Grid.Row="1" Grid.Column="1" x:Name="InteractJumpDistanceTextBox" 
+                                <TextBox Grid.Row="1" Grid.Column="1" x:Name="InteractDistanceTextBox" 
                                          Height="32" Margin="10,8" Style="{StaticResource ModernTextBox}"/>
-                                <TextBlock Grid.Row="1" Grid.Column="2" Text="需要交互时的跳跃距离 (默认 350)" 
+                                <TextBlock Grid.Row="1" Grid.Column="2" Text="交互时的距离 (默认 350)" 
                                            FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
 
                                 <TextBlock Grid.Row="2" Grid.Column="0" Text="普通移动距离:" 

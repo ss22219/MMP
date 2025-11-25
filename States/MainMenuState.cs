@@ -21,11 +21,13 @@ namespace MMP.States
 
             if (targetBtn != null)
             {
-                Console.WriteLine($"[主菜单] 点击 {targetBtn.Text}");
-                context.Controller.Click((int)targetBtn.Center.X, (int)targetBtn.Center.Y + 5);
-                if (!await context.WaitAndClickAsync(new[] {"开始探索", "继续探索"}, 3000, ct)) return;
-                // 等待状态改变（可被 ct 中断）
-                await context.DelayAsync(2000, ct);
+                while (true)
+                {
+                    Console.WriteLine($"[主菜单] 点击 {targetBtn.Text}");
+                    context.Controller.Click((int)targetBtn.Center.X, (int)targetBtn.Center.Y + 5);
+                    if(await context.WaitAndClickAsync(new[] { "开始探索", "继续探索" }, 3000, ct))
+                        break;
+                }
             }
             else
             {

@@ -121,7 +121,7 @@ namespace MMP
         // 普通攻击配置
         public int AttackInterval { get; set; } = 350;
         public int AttackCount { get; set; } = 3;
-        public int AttackRecoveryDelay { get; set; } = 50;
+        public int AttackRecoveryDelay { get; set; } = 100;
     }
 
     /// <summary>
@@ -156,24 +156,24 @@ namespace MMP
     public class MovementConfig
     {
         /// <summary>
-        /// 简单跳跃距离阈值（游戏单位，默认 500 = 5米）
+        /// 简单跳跃距离阈值（游戏单位，默认 1500 = 15米）
         /// </summary>
-        public float SimpleJumpDistance { get; set; } = 500;
+        public float SimpleJumpDistance { get; set; } = 1500;
 
         /// <summary>
-        /// 需要交互时的简单跳跃距离（游戏单位，默认 350 = 3.5米）
+        /// 需要交互时的距离（游戏单位，默认 350 = 3.5米）
         /// </summary>
-        public float InteractSimpleJumpDistance { get; set; } = 350;
+        public float InteractDistance { get; set; } = 350;
 
         /// <summary>
-        /// 普通移动距离阈值（游戏单位，默认 600 = 6米）
+        /// 普通移动距离阈值（游戏单位，默认 1000 = 10米）
         /// </summary>
-        public float NormalMoveDistance { get; set; } = 600;
+        public float NormalMoveDistance { get; set; } = 1000;
 
         /// <summary>
-        /// 冲刺距离阈值（游戏单位，默认 2000 = 20米）
+        /// 冲刺距离阈值（游戏单位，默认 3000 = 30米）
         /// </summary>
-        public float SprintDistance { get; set; } = 2000;
+        public float SprintDistance { get; set; } = 3000;
 
         /// <summary>
         /// 距离过远警告阈值（游戏单位，默认 20000 = 200米）

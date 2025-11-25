@@ -42,8 +42,9 @@ namespace MMP.States
 
             // 按空格键关闭
             Console.WriteLine("  → 按空格关闭（长按1.2秒）");
-            context.Controller.SendKey("SPACE", 1.2);
-            await context.DelayAsync(100, ct);
+            context.Controller.SendKeyDown("SPACE");
+            await context.DelayAsync(1200, ct);
+            context.Controller.SendKeyUp("SPACE");
         }
         
         public void Cleanup(StateContext context)

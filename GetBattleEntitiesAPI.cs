@@ -686,13 +686,11 @@ public class BattleEntitiesAPI
                 return entities;
             }
 
-            Console.WriteLine($"✓ Battle 地址: 0x{battle.ToInt64():X}");
 
             // 读取 Battle.Entities TMap
             IntPtr entitiesMapAddr = new IntPtr(battle.ToInt64() + OFFSET_BATTLE_ENTITIES);
             TMapData mapData = ReadStruct<TMapData>(entitiesMapAddr);
 
-            Console.WriteLine($"  Entities 数量: {mapData.ArrayNum}");
 
             if (mapData.ArrayNum <= 0 || !IsValidPointer(mapData.Data))
             {
@@ -807,7 +805,6 @@ public class BattleEntitiesAPI
                 }
             }
 
-            Console.WriteLine($"✓ 成功读取 {entities.Count} 个实体");
         }
         catch (Exception ex)
         {
@@ -919,7 +916,6 @@ public class BattleEntitiesAPI
                 }
             }
 
-            Console.WriteLine($"✓ 成功读取 {npcs.Count} 个 NPC");
         }
         catch (Exception ex)
         {

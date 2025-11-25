@@ -171,7 +171,7 @@ namespace MMP
 
             // 加载导航配置
             SimpleJumpDistanceTextBox.Text = _config.Movement.SimpleJumpDistance.ToString();
-            InteractJumpDistanceTextBox.Text = _config.Movement.InteractSimpleJumpDistance.ToString();
+            InteractDistanceTextBox.Text = _config.Movement.InteractDistance.ToString();
             NormalMoveDistanceTextBox.Text = _config.Movement.NormalMoveDistance.ToString();
             SprintDistanceTextBox.Text = _config.Movement.SprintDistance.ToString();
             TooFarDistanceTextBox.Text = _config.Movement.TooFarWarningDistance.ToString();
@@ -220,7 +220,7 @@ namespace MMP
 
                 // 保存导航配置
                 _config.Movement.SimpleJumpDistance = float.Parse(SimpleJumpDistanceTextBox.Text);
-                _config.Movement.InteractSimpleJumpDistance = float.Parse(InteractJumpDistanceTextBox.Text);
+                _config.Movement.InteractDistance = float.Parse(InteractDistanceTextBox.Text);
                 _config.Movement.NormalMoveDistance = float.Parse(NormalMoveDistanceTextBox.Text);
                 _config.Movement.SprintDistance = float.Parse(SprintDistanceTextBox.Text);
                 _config.Movement.TooFarWarningDistance = float.Parse(TooFarDistanceTextBox.Text);

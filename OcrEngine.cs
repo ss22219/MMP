@@ -119,7 +119,6 @@ namespace MMP
             {
                 // 尝试访问 bitmap 数据以确保它是有效的
                 var pixelFormat = bitmap.PixelFormat;
-                Console.WriteLine($"[OcrEngine] 开始识别 {bitmap.Width}x{bitmap.Height} 图像，格式: {pixelFormat}");
             }
             catch (Exception ex)
             {
