@@ -435,6 +435,8 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host ""
     Write-Host "编译失败" -ForegroundColor Red
     Write-Host ""
+    Write-Host "💡 提示: 如果之前运行过普通版本，请尝试删除 bin 文件夹后重试" -ForegroundColor Yellow
+    Write-Host ""
     pause
     exit 1
 }
@@ -442,6 +444,16 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host ""
 Write-Host "编译成功" -ForegroundColor Green
 Write-Host ""
+
+# 显示可执行文件路径
+$exePath = Join-Path $PWD "bin\Release\net10.0-windows\MMP_CUDA.exe"
+if (Test-Path $exePath) {
+    Write-Host "可执行文件位置:" -ForegroundColor Cyan
+    Write-Host "  $exePath" -ForegroundColor White
+    Write-Host "  (可以直接运行此文件)" -ForegroundColor Gray
+    Write-Host ""
+}
+
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "   启动 MMP (CUDA 加速)" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
@@ -450,6 +462,8 @@ Write-Host "提示:"
 Write-Host "  - 按 F10 启动/停止程序"
 Write-Host "  - 按 F12 强制退出深渊"
 Write-Host "  - 使用 CUDA 加速进行 OCR 识别"
+Write-Host ""
+Write-Host "⚠ 注意: 如果切换到普通版本，请先删除 bin 文件夹" -ForegroundColor Yellow
 Write-Host ""
 
 # 运行程序
