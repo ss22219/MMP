@@ -127,15 +127,15 @@
 
             <!-- 热键配置标签页 -->
             <TabItem Header="⌨️ 热键配置">
-                <Border Background="White" CornerRadius="8" Padding="30" Margin="0,10,0,0">
+                <Border Background="White" CornerRadius="8" Padding="20" Margin="0,10,0,0">
                     <StackPanel>
-                        <TextBlock Text="热键配置" FontSize="20" FontWeight="Bold" 
-                                   Foreground="#333" Margin="0,0,0,25"/>
+                        <TextBlock Text="热键配置" FontSize="18" FontWeight="Bold" 
+                                   Foreground="#333" Margin="0,0,0,15"/>
                         
                         <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="180"/>
-                                <ColumnDefinition Width="250"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="200"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
@@ -143,26 +143,26 @@
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="停止运行:" 
-                                       FontSize="14" VerticalAlignment="Center" Margin="0,15"/>
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="启动/停止:" 
+                                       FontSize="13" VerticalAlignment="Center" Margin="0,10"/>
                             <TextBox Grid.Row="0" Grid.Column="1" x:Name="ForceExitHotkeyTextBox" 
-                                     Height="38" Margin="10,15" Style="{StaticResource ModernTextBox}"/>
-                            <TextBlock Grid.Row="0" Grid.Column="2" Text="停止自动化运行（不关闭程序）" 
-                                       FontSize="12" Foreground="#999" VerticalAlignment="Center"/>
+                                     Height="32" Margin="10,10" Style="{StaticResource ModernTextBox}"/>
+                            <TextBlock Grid.Row="0" Grid.Column="2" Text="启动或停止自动化运行" 
+                                       FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
 
                             <TextBlock Grid.Row="1" Grid.Column="0" Text="强制退出深渊:" 
-                                       FontSize="14" VerticalAlignment="Center" Margin="0,15"/>
+                                       FontSize="13" VerticalAlignment="Center" Margin="0,10"/>
                             <TextBox Grid.Row="1" Grid.Column="1" x:Name="ForceExitAbyssHotkeyTextBox" 
-                                     Height="38" Margin="10,15" Style="{StaticResource ModernTextBox}"/>
+                                     Height="32" Margin="10,10" Style="{StaticResource ModernTextBox}"/>
                             <TextBlock Grid.Row="1" Grid.Column="2" Text="退出当前深渊探索" 
-                                       FontSize="12" Foreground="#999" VerticalAlignment="Center"/>
+                                       FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
                         </Grid>
 
-                        <Border Background="#FFF3E0" CornerRadius="6" Padding="15" Margin="0,30,0,0">
+                        <Border Background="#FFF3E0" CornerRadius="6" Padding="12" Margin="0,15,0,0">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="💡" FontSize="16" Margin="0,0,10,0"/>
+                                <TextBlock Text="💡" FontSize="14" Margin="0,0,8,0"/>
                                 <TextBlock Text="点击输入框后按下想要设置的按键" 
-                                           FontSize="13" Foreground="#F57C00" VerticalAlignment="Center"/>
+                                           FontSize="12" Foreground="#F57C00" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -171,15 +171,15 @@
 
             <!-- 超时配置标签页 -->
             <TabItem Header="⏱️ 超时配置">
-                <Border Background="White" CornerRadius="8" Padding="30" Margin="0,10,0,0">
+                <Border Background="White" CornerRadius="8" Padding="20" Margin="0,10,0,0">
                     <StackPanel>
-                        <TextBlock Text="超时配置" FontSize="20" FontWeight="Bold" 
-                                   Foreground="#333" Margin="0,0,0,25"/>
+                        <TextBlock Text="超时配置" FontSize="18" FontWeight="Bold" 
+                                   Foreground="#333" Margin="0,0,0,15"/>
                         
                         <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="200"/>
-                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="180"/>
+                                <ColumnDefinition Width="120"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
@@ -187,11 +187,11 @@
                             </Grid.RowDefinitions>
 
                             <TextBlock Grid.Row="0" Grid.Column="0" Text="状态超时时间 (秒):" 
-                                       FontSize="14" VerticalAlignment="Center" Margin="0,15"/>
+                                       FontSize="13" VerticalAlignment="Center" Margin="0,10"/>
                             <TextBox Grid.Row="0" Grid.Column="1" x:Name="StateTimeoutTextBox" 
-                                     Height="38" Margin="10,15" Style="{StaticResource ModernTextBox}"/>
+                                     Height="32" Margin="10,10" Style="{StaticResource ModernTextBox}"/>
                             <TextBlock Grid.Row="0" Grid.Column="2" Text="单个状态最长执行时间" 
-                                       FontSize="12" Foreground="#999" VerticalAlignment="Center"/>
+                                       FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
                         </Grid>
                     </StackPanel>
                 </Border>
@@ -199,15 +199,15 @@
 
             <!-- OCR 识别配置标签页 -->
             <TabItem Header="🔍 OCR 配置">
-                <Border Background="White" CornerRadius="8" Padding="30" Margin="0,10,0,0">
+                <Border Background="White" CornerRadius="8" Padding="20" Margin="0,10,0,0">
                     <StackPanel>
-                        <TextBlock Text="OCR 识别配置" FontSize="20" FontWeight="Bold" 
-                                   Foreground="#333" Margin="0,0,0,25"/>
+                        <TextBlock Text="OCR 识别配置" FontSize="18" FontWeight="Bold" 
+                                   Foreground="#333" Margin="0,0,0,15"/>
                         
                         <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="220"/>
                                 <ColumnDefinition Width="200"/>
+                                <ColumnDefinition Width="150"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
@@ -218,52 +218,122 @@
                             </Grid.RowDefinitions>
 
                             <TextBlock Grid.Row="0" Grid.Column="0" Text="识别间隔 (毫秒):" 
-                                       FontSize="14" VerticalAlignment="Center" Margin="0,15"/>
+                                       FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
                             <TextBox Grid.Row="0" Grid.Column="1" x:Name="OcrIntervalTextBox" 
-                                     Height="38" Margin="10,15" Style="{StaticResource ModernTextBox}"/>
+                                     Height="32" Margin="10,8" Style="{StaticResource ModernTextBox}"/>
                             <TextBlock Grid.Row="0" Grid.Column="2" Text="OCR 扫描频率" 
-                                       FontSize="12" Foreground="#999" VerticalAlignment="Center"/>
+                                       FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
 
                             <TextBlock Grid.Row="1" Grid.Column="0" Text="识别置信度阈值 (0-1):" 
-                                       FontSize="14" VerticalAlignment="Center" Margin="0,15"/>
+                                       FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
                             <TextBox Grid.Row="1" Grid.Column="1" x:Name="OcrConfidenceTextBox" 
-                                     Height="38" Margin="10,15" Style="{StaticResource ModernTextBox}"/>
+                                     Height="32" Margin="10,8" Style="{StaticResource ModernTextBox}"/>
                             <TextBlock Grid.Row="1" Grid.Column="2" Text="低于此值的识别结果将被忽略" 
-                                       FontSize="12" Foreground="#999" VerticalAlignment="Center"/>
+                                       FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
 
                             <TextBlock Grid.Row="2" Grid.Column="0" Text="最小文本长度:" 
-                                       FontSize="14" VerticalAlignment="Center" Margin="0,15"/>
+                                       FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
                             <TextBox Grid.Row="2" Grid.Column="1" x:Name="OcrMinTextLengthTextBox" 
-                                     Height="38" Margin="10,15" Style="{StaticResource ModernTextBox}"/>
+                                     Height="32" Margin="10,8" Style="{StaticResource ModernTextBox}"/>
                             <TextBlock Grid.Row="2" Grid.Column="2" Text="忽略短于此长度的文本" 
-                                       FontSize="12" Foreground="#999" VerticalAlignment="Center"/>
+                                       FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
 
                             <TextBlock Grid.Row="3" Grid.Column="0" Text="显示识别结果:" 
-                                       FontSize="14" VerticalAlignment="Center" Margin="0,15"/>
+                                       FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
                             <CheckBox Grid.Row="3" Grid.Column="1" x:Name="ShowOcrResultsCheckBox" 
-                                      Margin="10,15" VerticalAlignment="Center" FontSize="13"/>
+                                      Margin="10,8" VerticalAlignment="Center" FontSize="12"/>
                             <TextBlock Grid.Row="3" Grid.Column="2" Text="在日志中显示详细识别结果" 
-                                       FontSize="12" Foreground="#999" VerticalAlignment="Center"/>
+                                       FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
                         </Grid>
                     </StackPanel>
                 </Border>
             </TabItem>
 
+            <!-- 导航配置标签页 -->
+            <TabItem Header="🧭 导航配置">
+                <Border Background="White" CornerRadius="8" Padding="20" Margin="0,10,0,0">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <TextBlock Text="导航移动配置" FontSize="18" FontWeight="Bold" 
+                                       Foreground="#333" Margin="0,0,0,15"/>
+                            
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="200"/>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="简单跳跃距离:" 
+                                           FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
+                                <TextBox Grid.Row="0" Grid.Column="1" x:Name="SimpleJumpDistanceTextBox" 
+                                         Height="32" Margin="10,8" Style="{StaticResource ModernTextBox}"/>
+                                <TextBlock Grid.Row="0" Grid.Column="2" Text="5米内用简单跳跃 (默认 500)" 
+                                           FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
+
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="交互跳跃距离:" 
+                                           FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
+                                <TextBox Grid.Row="1" Grid.Column="1" x:Name="InteractJumpDistanceTextBox" 
+                                         Height="32" Margin="10,8" Style="{StaticResource ModernTextBox}"/>
+                                <TextBlock Grid.Row="1" Grid.Column="2" Text="需要交互时的跳跃距离 (默认 350)" 
+                                           FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
+
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="普通移动距离:" 
+                                           FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
+                                <TextBox Grid.Row="2" Grid.Column="1" x:Name="NormalMoveDistanceTextBox" 
+                                         Height="32" Margin="10,8" Style="{StaticResource ModernTextBox}"/>
+                                <TextBlock Grid.Row="2" Grid.Column="2" Text="6-20米用普通移动 (默认 600)" 
+                                           FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
+
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="冲刺距离:" 
+                                           FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
+                                <TextBox Grid.Row="3" Grid.Column="1" x:Name="SprintDistanceTextBox" 
+                                         Height="32" Margin="10,8" Style="{StaticResource ModernTextBox}"/>
+                                <TextBlock Grid.Row="3" Grid.Column="2" Text="20米以上用冲刺 (默认 2000)" 
+                                           FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
+
+                                <TextBlock Grid.Row="4" Grid.Column="0" Text="距离过远警告:" 
+                                           FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
+                                <TextBox Grid.Row="4" Grid.Column="1" x:Name="TooFarDistanceTextBox" 
+                                         Height="32" Margin="10,8" Style="{StaticResource ModernTextBox}"/>
+                                <TextBlock Grid.Row="4" Grid.Column="2" Text="超过200米放弃导航 (默认 20000)" 
+                                           FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
+                            </Grid>
+
+                            <Border Background="#E3F2FD" CornerRadius="6" Padding="12" Margin="0,15,0,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="ℹ️" FontSize="14" Margin="0,0,8,0"/>
+                                    <TextBlock Text="距离单位：游戏内部单位，100 = 1米" 
+                                               FontSize="12" Foreground="#1976D2" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Border>
+            </TabItem>
+
             <!-- 战斗配置标签页 -->
             <TabItem Header="⚔️ 战斗配置">
-                <Border Background="White" CornerRadius="8" Padding="30" Margin="0,10,0,0">
-                    <StackPanel>
-                        <TextBlock Text="战斗配置" FontSize="20" FontWeight="Bold" 
-                                   Foreground="#333" Margin="0,0,0,25"/>
+                <Border Background="White" CornerRadius="8" Padding="20" Margin="0,10,0,0">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <TextBlock Text="战斗配置" FontSize="18" FontWeight="Bold" 
+                                       Foreground="#333" Margin="0,0,0,15"/>
                         
                         <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="220"/>
-                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="200"/>
+                                <ColumnDefinition Width="120"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
@@ -275,62 +345,63 @@
                             </Grid.RowDefinitions>
 
                             <TextBlock Grid.Row="0" Grid.Column="0" Text="怪物检测距离:" 
-                                       FontSize="14" VerticalAlignment="Center" Margin="0,15"/>
+                                       FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
                             <TextBox Grid.Row="0" Grid.Column="1" x:Name="MonsterDetectionRangeTextBox" 
-                                     Height="38" Margin="10,15" Style="{StaticResource ModernTextBox}"/>
+                                     Height="32" Margin="10,8" Style="{StaticResource ModernTextBox}"/>
                             <TextBlock Grid.Row="0" Grid.Column="2" Text="检测范围 (30000 = 300米)" 
-                                       FontSize="12" Foreground="#999" VerticalAlignment="Center"/>
+                                       FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
 
                             <TextBlock Grid.Row="1" Grid.Column="0" Text="靠近距离阈值:" 
-                                       FontSize="14" VerticalAlignment="Center" Margin="0,15"/>
+                                       FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
                             <TextBox Grid.Row="1" Grid.Column="1" x:Name="ApproachDistanceTextBox" 
-                                     Height="38" Margin="10,15" Style="{StaticResource ModernTextBox}"/>
+                                     Height="32" Margin="10,8" Style="{StaticResource ModernTextBox}"/>
                             <TextBlock Grid.Row="1" Grid.Column="2" Text="开始攻击的距离 (3000 = 30米)" 
-                                       FontSize="12" Foreground="#999" VerticalAlignment="Center"/>
+                                       FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
 
                             <TextBlock Grid.Row="2" Grid.Column="0" Text="Q 技能间隔 (毫秒):" 
-                                       FontSize="14" VerticalAlignment="Center" Margin="0,15"/>
+                                       FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
                             <TextBox Grid.Row="2" Grid.Column="1" x:Name="QSkillIntervalTextBox" 
-                                     Height="38" Margin="10,15" Style="{StaticResource ModernTextBox}"/>
+                                     Height="32" Margin="10,8" Style="{StaticResource ModernTextBox}"/>
                             <TextBlock Grid.Row="2" Grid.Column="2" Text="释放 Q 技能的时间间隔" 
-                                       FontSize="12" Foreground="#999" VerticalAlignment="Center"/>
+                                       FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
 
                             <TextBlock Grid.Row="3" Grid.Column="0" Text="E 技能次数:" 
-                                       FontSize="14" VerticalAlignment="Center" Margin="0,15"/>
+                                       FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
                             <TextBox Grid.Row="3" Grid.Column="1" x:Name="ESkillCountTextBox" 
-                                     Height="38" Margin="10,15" Style="{StaticResource ModernTextBox}"/>
+                                     Height="32" Margin="10,8" Style="{StaticResource ModernTextBox}"/>
                             <TextBlock Grid.Row="3" Grid.Column="2" Text="Q 技能后连续释放 E 的次数" 
-                                       FontSize="12" Foreground="#999" VerticalAlignment="Center"/>
+                                       FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
 
                             <TextBlock Grid.Row="4" Grid.Column="0" Text="E 技能间隔 (毫秒):" 
-                                       FontSize="14" VerticalAlignment="Center" Margin="0,15"/>
+                                       FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
                             <TextBox Grid.Row="4" Grid.Column="1" x:Name="ESkillIntervalTextBox" 
-                                     Height="38" Margin="10,15" Style="{StaticResource ModernTextBox}"/>
+                                     Height="32" Margin="10,8" Style="{StaticResource ModernTextBox}"/>
                             <TextBlock Grid.Row="4" Grid.Column="2" Text="释放 E 技能的时间间隔" 
-                                       FontSize="12" Foreground="#999" VerticalAlignment="Center"/>
+                                       FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
 
                             <TextBlock Grid.Row="5" Grid.Column="0" Text="攻击间隔 (毫秒):" 
-                                       FontSize="14" VerticalAlignment="Center" Margin="0,15"/>
+                                       FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
                             <TextBox Grid.Row="5" Grid.Column="1" x:Name="AttackIntervalTextBox" 
-                                     Height="38" Margin="10,15" Style="{StaticResource ModernTextBox}"/>
+                                     Height="32" Margin="10,8" Style="{StaticResource ModernTextBox}"/>
                             <TextBlock Grid.Row="5" Grid.Column="2" Text="普通攻击的时间间隔" 
-                                       FontSize="12" Foreground="#999" VerticalAlignment="Center"/>
+                                       FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
 
                             <TextBlock Grid.Row="6" Grid.Column="0" Text="每轮攻击次数:" 
-                                       FontSize="14" VerticalAlignment="Center" Margin="0,15"/>
+                                       FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
                             <TextBox Grid.Row="6" Grid.Column="1" x:Name="AttackCountTextBox" 
-                                     Height="38" Margin="10,15" Style="{StaticResource ModernTextBox}"/>
+                                     Height="32" Margin="10,8" Style="{StaticResource ModernTextBox}"/>
                             <TextBlock Grid.Row="6" Grid.Column="2" Text="每轮连续攻击的次数" 
-                                       FontSize="12" Foreground="#999" VerticalAlignment="Center"/>
+                                       FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
                             
                             <TextBlock Grid.Row="7" Grid.Column="0" Text="攻击后摇间隔 (毫秒):" 
-                                       FontSize="14" VerticalAlignment="Center" Margin="0,15"/>
+                                       FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
                             <TextBox Grid.Row="7" Grid.Column="1" x:Name="AttackRecoveryDelayTextBox" 
-                                     Height="38" Margin="10,15" Style="{StaticResource ModernTextBox}"/>
+                                     Height="32" Margin="10,8" Style="{StaticResource ModernTextBox}"/>
                             <TextBlock Grid.Row="7" Grid.Column="2" Text="每次攻击后的恢复等待时间" 
-                                       FontSize="12" Foreground="#999" VerticalAlignment="Center"/>
+                                       FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
                         </Grid>
-                    </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
                 </Border>
             </TabItem>
         </TabControl>

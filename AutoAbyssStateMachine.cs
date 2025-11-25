@@ -162,7 +162,8 @@ namespace MMP
         private bool Initialize()
         {
             Console.WriteLine("=== 深渊自动化状态机 ===");
-            Console.WriteLine("按 F10 强制退出");
+            Console.WriteLine("按 F10 启动/停止");
+            Console.WriteLine("按 F12 强制退出深渊");
             Console.WriteLine();
 
             // 加载配置

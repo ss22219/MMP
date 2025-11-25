@@ -37,7 +37,7 @@ namespace MMP
         {
             _hotkeyThread = new Thread(() =>
             {
-                Console.WriteLine($"[热键监听] 已启动 - {_config.Hotkeys.ForceExit}: 停止运行, {_config.Hotkeys.ForceExitAbyss}: 强制退出深渊");
+                Console.WriteLine($"[热键监听] 已启动 - {_config.Hotkeys.ForceExit}: 启动/停止, {_config.Hotkeys.ForceExitAbyss}: 强制退出深渊");
                 
                 bool lastStopState = false;
                 bool lastForceExitAbyssState = false;
@@ -53,14 +53,15 @@ namespace MMP
                         bool currentStopState = (GetAsyncKeyState(stopKey) & 0x8000) != 0;
                         bool currentForceExitAbyssState = (GetAsyncKeyState(forceExitAbyssKey) & 0x8000) != 0;
                         
-                        // 停止运行（不关闭程序）
+                        // F10: 启动/停止切换
                         if (currentStopState && !lastStopState)
                         {
                             Dispatcher.Invoke(async () =>
                             {
-                                Console.WriteLine($"\n[{_config.Hotkeys.ForceExit}] 停止运行");
                                 if (_stateMachine != null)
                                 {
+                                    // 当前正在运行 -> 停止
+                                    Console.WriteLine($"\n[{_config.Hotkeys.ForceExit}] 停止运行");
                                     StopButton.IsEnabled = false;
                                     InfoText.Text = "正在停止...";
                                     
@@ -75,7 +76,9 @@ namespace MMP
                                 }
                                 else
                                 {
-                                    Console.WriteLine("程序未在运行");
+                                    // 当前已停止 -> 启动
+                                    Console.WriteLine($"\n[{_config.Hotkeys.ForceExit}] 启动运行");
+                                    StartButton_Click(null, null);
                                 }
                             });
                         }
@@ -166,6 +169,13 @@ namespace MMP
             OcrMinTextLengthTextBox.Text = _config.Ocr.MinTextLength.ToString();
             ShowOcrResultsCheckBox.IsChecked = _config.Ocr.ShowRecognitionResults;
 
+            // 加载导航配置
+            SimpleJumpDistanceTextBox.Text = _config.Movement.SimpleJumpDistance.ToString();
+            InteractJumpDistanceTextBox.Text = _config.Movement.InteractSimpleJumpDistance.ToString();
+            NormalMoveDistanceTextBox.Text = _config.Movement.NormalMoveDistance.ToString();
+            SprintDistanceTextBox.Text = _config.Movement.SprintDistance.ToString();
+            TooFarDistanceTextBox.Text = _config.Movement.TooFarWarningDistance.ToString();
+
             // 设置热键输入框的键盘事件
             ForceExitHotkeyTextBox.PreviewKeyDown += HotkeyTextBox_PreviewKeyDown;
             ForceExitAbyssHotkeyTextBox.PreviewKeyDown += HotkeyTextBox_PreviewKeyDown;
@@ -207,6 +217,13 @@ namespace MMP
                 _config.Ocr.ConfidenceThreshold = float.Parse(OcrConfidenceTextBox.Text);
                 _config.Ocr.MinTextLength = int.Parse(OcrMinTextLengthTextBox.Text);
                 _config.Ocr.ShowRecognitionResults = ShowOcrResultsCheckBox.IsChecked ?? false;
+
+                // 保存导航配置
+                _config.Movement.SimpleJumpDistance = float.Parse(SimpleJumpDistanceTextBox.Text);
+                _config.Movement.InteractSimpleJumpDistance = float.Parse(InteractJumpDistanceTextBox.Text);
+                _config.Movement.NormalMoveDistance = float.Parse(NormalMoveDistanceTextBox.Text);
+                _config.Movement.SprintDistance = float.Parse(SprintDistanceTextBox.Text);
+                _config.Movement.TooFarWarningDistance = float.Parse(TooFarDistanceTextBox.Text);
 
                 _config.Save();
                 InfoText.Text = "配置已保存";

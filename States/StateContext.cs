@@ -209,7 +209,7 @@ namespace MMP.States
             var playerPos = BattleApi.GetCameraLocation();
             float distance = CalculateDistance(playerPos, targetPos);
             
-            if (distance < 10000) // 100米以内用简单跳跃
+            if (distance < Config.Movement.SimpleJumpDistance)
             {
                 Console.WriteLine($"  → 距离较近 ({distance / 100:F1}米)，使用简单双跳");
                 Controller.SendKey("SPACE", 0.1);
@@ -251,7 +251,7 @@ namespace MMP.States
             Console.WriteLine($"  → 开始导航，距离: {initialDistance / 100:F1}米");
 
             // 初始距离检查
-            if (needInteract && initialDistance < 350)
+            if (needInteract && initialDistance < Config.Movement.InteractSimpleJumpDistance)
             {
                 Controller.SendKey("F", 0.1);
                 await Task.Delay(200, ct);
@@ -259,7 +259,7 @@ namespace MMP.States
                 return true;
             }
 
-            if (!needInteract && initialDistance < 500)
+            if (!needInteract && initialDistance < Config.Movement.SimpleJumpDistance)
                 return true;
 
             // 初始调整视角
@@ -311,7 +311,7 @@ namespace MMP.States
                         float distance = CalculateDistance(playerLoc, targetPos);
 
                         // 距离过远检查
-                        if (distance > 20000)
+                        if (distance > Config.Movement.TooFarWarningDistance)
                         {
                             Console.WriteLine($"  ⚠ 距离过远: {distance / 100:F1}米");
                             return false;
@@ -355,7 +355,7 @@ namespace MMP.States
                                 return true;
                             }
                         }
-                        else if (distance > 2000) // 20米以上：冲刺
+                        else if (distance > Config.Movement.SprintDistance)
                         {
                             // 检查高度差，决定是否跳跃
                             if ((DateTime.Now - lastJumpTime).TotalMilliseconds > 1000)
@@ -382,7 +382,7 @@ namespace MMP.States
                                 isMoving = true;
                             }
                         }
-                        else if (distance > 600) // 6-20米：普通移动
+                        else if (distance > Config.Movement.NormalMoveDistance)
                         {
                             // 检查高度差
                             if ((DateTime.Now - lastJumpTime).TotalMilliseconds > 1000)

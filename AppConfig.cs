@@ -31,6 +31,11 @@ namespace MMP
         public OcrConfig Ocr { get; set; } = new();
 
         /// <summary>
+        /// 移动配置
+        /// </summary>
+        public MovementConfig Movement { get; set; } = new();
+
+        /// <summary>
         /// 加载配置
         /// </summary>
         public static AppConfig Load()
@@ -80,7 +85,7 @@ namespace MMP
     public class HotkeyConfig
     {
         /// <summary>
-        /// 停止运行热键（默认 F10）
+        /// 启动/停止运行热键（默认 F10）
         /// </summary>
         public string ForceExit { get; set; } = "F10";
 
@@ -143,5 +148,36 @@ namespace MMP
         /// 最小文本长度（默认 1）
         /// </summary>
         public int MinTextLength { get; set; } = 1;
+    }
+
+    /// <summary>
+    /// 移动配置
+    /// </summary>
+    public class MovementConfig
+    {
+        /// <summary>
+        /// 简单跳跃距离阈值（游戏单位，默认 500 = 5米）
+        /// </summary>
+        public float SimpleJumpDistance { get; set; } = 500;
+
+        /// <summary>
+        /// 需要交互时的简单跳跃距离（游戏单位，默认 350 = 3.5米）
+        /// </summary>
+        public float InteractSimpleJumpDistance { get; set; } = 350;
+
+        /// <summary>
+        /// 普通移动距离阈值（游戏单位，默认 600 = 6米）
+        /// </summary>
+        public float NormalMoveDistance { get; set; } = 600;
+
+        /// <summary>
+        /// 冲刺距离阈值（游戏单位，默认 2000 = 20米）
+        /// </summary>
+        public float SprintDistance { get; set; } = 2000;
+
+        /// <summary>
+        /// 距离过远警告阈值（游戏单位，默认 20000 = 200米）
+        /// </summary>
+        public float TooFarWarningDistance { get; set; } = 20000;
     }
 }

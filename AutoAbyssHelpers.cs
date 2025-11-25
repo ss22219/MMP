@@ -631,7 +631,7 @@ namespace MMP
                     }
 
                     // 根据距离控制移动
-                    if (distance > 2000) // 20米以上：冲刺
+                    if (distance > _config.Movement.SprintDistance)
                     {
                         if (!isMoving)
                         {
@@ -642,7 +642,7 @@ namespace MMP
                             isMoving = true;
                         }
                     }
-                    else if (distance > 600) // 6-20米：普通移动
+                    else if (distance > _config.Movement.NormalMoveDistance)
                     {
                         if (isMoving)
                         {
@@ -651,7 +651,7 @@ namespace MMP
                         }
                         _controller.SendKeyDown("W");
                     }
-                    else // 6米以内：慢速接近
+                    else // 慢速接近
                     {
                         if (isMoving)
                         {

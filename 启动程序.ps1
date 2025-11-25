@@ -260,7 +260,7 @@ Write-Host "   启动 MMP" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "提示:" -ForegroundColor Yellow
-Write-Host "  - 按 F10 强制退出程序" -ForegroundColor Yellow
+Write-Host "  - 按 F10 启动/停止程序" -ForegroundColor Yellow
 Write-Host "  - 按 F12 强制退出深渊" -ForegroundColor Yellow
 Write-Host ""
 
