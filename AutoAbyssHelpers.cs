@@ -22,7 +22,7 @@ namespace MMP
             var startTime = DateTime.Now;
             var currentState = CurrentState;
             GameState? detectedState = null;
-            
+
             // 创建取消令牌
             _currentWaitCts = new CancellationTokenSource();
             var ct = _currentWaitCts.Token;
@@ -35,7 +35,7 @@ namespace MMP
                 {
                     // OCR 完成后，调用状态决策器
                     var newState = StateDecider(ocrResult, currentState);
-                    
+
                     // 如果检测到状态变化，取消等待
                     if (newState != null && newState != currentState)
                     {
@@ -45,7 +45,7 @@ namespace MMP
                         _currentWaitCts?.Cancel();
                     }
                 };
-                
+
                 OnOcrCompleted += ocrHandler;
             }
 
@@ -71,7 +71,7 @@ namespace MMP
                 _currentWaitCts = null;
             }
         }
-        
+
         /// <summary>
         /// 同步版本的 Delay（用于不支持 async 的地方）
         /// </summary>
@@ -97,7 +97,7 @@ namespace MMP
                 r.Text.Contains("乐土之国"));
             if (hasMainMenu)
                 return GameState.MainMenu;
-            
+
             // 【最高优先级】关闭 UI
             // 检测需要关闭的弹窗和提示
             bool hasUIToClose = ocrResult.Regions.Any(r =>
@@ -110,7 +110,7 @@ namespace MMP
                 r.Text.Contains("点击任意"));
             if (hasUIToClose)
                 return GameState.ClosingUI;
-            
+
             // 【最高优先级】ForceExiting 状态执行完成后，检测是否回到主菜单
             if (currentState == GameState.ForceExiting)
             {
@@ -133,12 +133,12 @@ namespace MMP
             {
                 return GameState.SelectingBuff;
             }
-            
+
             if (ocrResult.Regions.Any(r => r.Text.Contains("选择烛芯")))
             {
                 return GameState.SelectingCandle;
             }
-            
+
 
             // 【中高优先级】簧火机关交互检测（使用 BattleAPI）
             // 簧火机关优先级高于导航，确保及时交互
@@ -265,8 +265,27 @@ namespace MMP
 
             // 【最低优先级】主菜单
             // 只有在没有导航文字时，才检测主菜单
-            bool hasMainMenuText = ocrResult.Regions.Any(r => r.Text.Contains("坠入深渊") || r.Text.Contains("开始探索"));
-            if (hasMainMenuText && !hasNavigationText)
+            // 获取窗口尺寸用于区域判断
+            bool hasMainMenuText = ocrResult.Regions.Any(r =>
+                r.Text.Contains("坠入深渊") ||
+                r.Text.Contains("开始探索") ||
+                r.Text.Contains("乐土之国"));
+
+            // "继续探索" 必须在右下角 1/4 区域
+            bool hasContinueExplore = false;
+            if (ocrResult.Regions.Any(r =>
+                 r.Text.Contains("继续探索"))){
+
+                var (winWidth, winHeight) = WindowHelper.GetWindowSize(_hwnd);
+                float rightQuarterX = winWidth * 0.75f;  // 右侧 1/4 区域的起始 X 坐标
+                float bottomQuarterY = winHeight * 0.75f; // 底部 1/4 区域的起始 Y 坐标
+
+                hasContinueExplore = ocrResult.Regions.Any(r =>
+                 r.Text.Contains("继续探索") &&
+                 r.Center.X >= rightQuarterX &&
+                 r.Center.Y >= bottomQuarterY);
+            }
+            if ((hasMainMenuText || hasContinueExplore) && !hasNavigationText)
             {
                 if (currentState != GameState.MainMenu)
                     return GameState.MainMenu;
@@ -296,7 +315,7 @@ namespace MMP
                 {
                     bool found = ocrResult.Regions.Any(r =>
                         contains ? r.Text.Contains(text) : r.Text == text);
-                    
+
                     if (found)
                         return true;
                 }
@@ -508,14 +527,14 @@ namespace MMP
             Thread.Sleep(100);
             _controller.SendKey("4", 0.1);
             Thread.Sleep(500);
-            
+
             AdjustCameraToTarget(api, targetPos);
-            
+
             // 执行二段跳
             _controller.SendKey("SPACE", 0.1);
             Thread.Sleep(300);
             _controller.SendKey("SPACE", 0.1);
-            
+
             _controller.SendKeyDown("W");
             Thread.Sleep(300);
             _controller.SendKeyDown("LSHIFT");
@@ -530,7 +549,7 @@ namespace MMP
 
             var initialPlayerLoc = api.GetPlayerLocation();
             float initialDistance = CalculateDistance(initialPlayerLoc, targetPos);
-            
+
             Console.WriteLine($"  → 导航距离: {initialDistance / 100:F1}米");
 
             // 如果已经很近，直接交互

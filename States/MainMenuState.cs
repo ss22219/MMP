@@ -23,14 +23,14 @@ namespace MMP.States
             {
                 Console.WriteLine($"[主菜单] 点击 {targetBtn.Text}");
                 context.Controller.Click((int)targetBtn.Center.X, (int)targetBtn.Center.Y + 5);
-                if (!await context.WaitAndClickAsync("开始探索", 5000, ct)) return;
+                if (!await context.WaitAndClickAsync(new[] {"开始探索", "继续探索"}, 3000, ct)) return;
                 // 等待状态改变（可被 ct 中断）
                 await context.DelayAsync(2000, ct);
             }
             else
             {
                 targetBtn = ocrResult.Regions.FirstOrDefault(r =>
-                    r.Text.Contains("开始探索"));
+                    r.Text.Contains("开始探索") || r.Text.Contains("继续探索"));
                 if (targetBtn != null)
                     context.Controller.Click((int)targetBtn.Center.X, (int)targetBtn.Center.Y + 5);
                 else

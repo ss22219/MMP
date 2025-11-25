@@ -8,6 +8,43 @@ Write-Host "   MMP CUDA 自动启动脚本" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
+# 自动查找项目根目录
+Write-Host "正在查找项目根目录..."
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$projectRoot = $null
+
+# 首先检查脚本所在目录
+if (Test-Path (Join-Path $scriptDir "MMP_CUDA.csproj")) {
+    $projectRoot = $scriptDir
+    Write-Host "找到项目根目录: $projectRoot" -ForegroundColor Green
+} else {
+    # 向上查找最多 3 层目录
+    $currentDir = $scriptDir
+    for ($i = 0; $i -lt 3; $i++) {
+        $parentDir = Split-Path -Parent $currentDir
+        if (-not $parentDir) { break }
+        
+        if (Test-Path (Join-Path $parentDir "MMP_CUDA.csproj")) {
+            $projectRoot = $parentDir
+            Write-Host "找到项目根目录: $projectRoot" -ForegroundColor Green
+            break
+        }
+        $currentDir = $parentDir
+    }
+}
+
+if (-not $projectRoot) {
+    Write-Host "错误: 无法找到项目根目录 (MMP_CUDA.csproj)" -ForegroundColor Red
+    Write-Host "请确保脚本在项目目录或其子目录中运行"
+    pause
+    exit 1
+}
+
+# 切换到项目根目录
+Set-Location $projectRoot
+Write-Host "当前工作目录: $PWD"
+Write-Host ""
+
 # 读取当前版本
 $currentVersion = "unknown"
 if (Test-Path "version.txt") {

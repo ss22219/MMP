@@ -99,9 +99,17 @@ namespace MMP.States
         }
         
         /// <summary>
-        /// 等待并点击出现的按钮
+        /// 等待并点击出现的按钮（单个文本）
         /// </summary>
         public async Task<bool> WaitAndClickAsync(string buttonText, int timeoutMs, CancellationToken ct)
+        {
+            return await WaitAndClickAsync(new[] { buttonText }, timeoutMs, ct);
+        }
+
+        /// <summary>
+        /// 等待并点击出现的按钮（多个文本，找到任意一个就点击）
+        /// </summary>
+        public async Task<bool> WaitAndClickAsync(string[] buttonTexts, int timeoutMs, CancellationToken ct)
         {
             var startTime = DateTime.Now;
             var endTime = startTime.AddMilliseconds(timeoutMs);
@@ -111,19 +119,23 @@ namespace MMP.States
                 var ocrResult = _getLatestOcrResult();
                 if (ocrResult != null && ocrResult.Regions != null)
                 {
-                    var button = ocrResult.Regions.FirstOrDefault(r => r.Text.Contains(buttonText));
-                    if (button != null && Controller != null)
+                    // 遍历所有候选文本
+                    foreach (var buttonText in buttonTexts)
                     {
-                        Console.WriteLine($"  [等待点击] 找到 {buttonText}，点击");
-                        Controller.Click((int)button.Center.X, (int)button.Center.Y);
-                        return true;
+                        var button = ocrResult.Regions.FirstOrDefault(r => r.Text.Contains(buttonText));
+                        if (button != null && Controller != null)
+                        {
+                            Console.WriteLine($"  [等待点击] 找到 {buttonText}，点击");
+                            Controller.Click((int)button.Center.X, (int)button.Center.Y);
+                            return true;
+                        }
                     }
                 }
 
                 await Task.Delay(50, ct);
             }
 
-            Console.WriteLine($"  [等待点击] 超时，未找到 {buttonText}");
+            Console.WriteLine($"  [等待点击] 超时，未找到 [{string.Join(", ", buttonTexts)}]");
             return false;
         }
 
@@ -196,7 +208,7 @@ namespace MMP.States
             await Task.Delay(500, ct);
             
             await AdjustCameraToTargetAsync(targetPos, ct);
-            
+            Controller.MouseDown(key: "right");
             Controller.SendKey("SPACE", 0.1);
             await Task.Delay(300, ct);
             Controller.SendKey("SPACE", 0.1);
@@ -398,6 +410,7 @@ namespace MMP.States
                                 Console.WriteLine("  → 取消冲刺，普通移动");
                                 Controller.SendKeyUp("LSHIFT");
                                 Controller.SendKeyUp("W");
+                                Controller.MouseUp(key: "right");
                                 isMoving = false;
                             }
                             Controller.SendKeyDown("W");
@@ -438,6 +451,7 @@ namespace MMP.States
                         {
                             Controller.SendKeyUp("W");
                             Controller.SendKeyUp("LSHIFT");
+                            Controller.MouseUp(key: "right");
                             isMoving = false;
                         }
                         await AdjustCameraToTargetAsync(targetPos, ct);
@@ -452,6 +466,7 @@ namespace MMP.States
             {
                 Controller.SendKeyUp("W");
                 Controller.SendKeyUp("LSHIFT");
+                Controller.MouseUp(key: "right");
             }
 
             return false;

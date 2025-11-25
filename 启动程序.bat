@@ -7,6 +7,42 @@ echo    MMP 自动启动脚本
 echo ========================================
 echo.
 
+:: 获取批处理文件所在目录
+set "SCRIPT_DIR=%~dp0"
+cd /d "%SCRIPT_DIR%"
+
+:: 查找项目根目录
+echo 正在查找项目根目录...
+
+:: 检查当前目录
+if exist "MMP.csproj" (
+    echo 找到项目根目录: %CD%
+    goto :found_project
+)
+
+:: 检查父目录
+cd ..
+if exist "MMP.csproj" (
+    echo 找到项目根目录: %CD%
+    goto :found_project
+)
+
+:: 检查父父目录
+cd ..
+if exist "MMP.csproj" (
+    echo 找到项目根目录: %CD%
+    goto :found_project
+)
+
+:: 未找到项目
+echo 错误: 无法找到项目根目录 ^(MMP.csproj^)
+echo 请确保脚本在项目目录或其子目录中运行
+pause
+exit /b 1
+
+:found_project
+echo.
+
 :: 读取当前版本
 set "CURRENT_VERSION=unknown"
 if exist "version.txt" (
