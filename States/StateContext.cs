@@ -205,6 +205,21 @@ namespace MMP.States
         {
             if (BattleApi == null || Controller == null) return;
 
+            // 计算距离，如果距离近就用简单跳跃
+            var playerPos = BattleApi.GetCameraLocation();
+            float distance = CalculateDistance(playerPos, targetPos);
+            
+            if (distance < 10000) // 100米以内用简单跳跃
+            {
+                Console.WriteLine($"  → 距离较近 ({distance / 100:F1}米)，使用简单双跳");
+                Controller.SendKey("SPACE", 0.1);
+                await Task.Delay(300, ct);
+                Controller.SendKey("SPACE", 0.1);
+                return;
+            }
+
+            // 距离远使用完整的二段跳
+            Console.WriteLine($"  → 距离较远 ({distance / 100:F1}米)，使用完整二段跳");
             Controller.SendMouseMove(0, -500);
             await Task.Delay(100, ct);
             Controller.SendKey("4", 0.1);
