@@ -394,7 +394,22 @@ if (-not $dotnetCmd) {
     $dotnetMajor = $dotnetVersion.Split(".")[0]
     
     if ($dotnetMajor -eq "10") {
-        Write-Host "已安装 .NET 10 SDK" -ForegroundColor Green
+        # 检查是否为预览版
+        if ($dotnetVersion -match "preview|rc|alpha|beta") {
+            Write-Host "⚠ 检测到 .NET 10 预览版 (版本: $dotnetVersion)" -ForegroundColor Yellow
+            Write-Host ""
+            Write-Host "预览版可能不稳定，建议安装正式版" -ForegroundColor Yellow
+            Write-Host "请从以下地址下载并安装 .NET 10 正式版:" -ForegroundColor Yellow
+            Write-Host "  https://dotnet.microsoft.com/download/dotnet/10.0" -ForegroundColor White
+            Write-Host ""
+            $choice = Read-Host "是否继续使用预览版? (y/n)"
+            if ($choice -ne "y") {
+                exit 1
+            }
+        }
+        else {
+            Write-Host "已安装 .NET 10 SDK (版本: $dotnetVersion)" -ForegroundColor Green
+        }
     } else {
         Write-Host "当前 .NET SDK 版本不是 10.x" -ForegroundColor Yellow
         Write-Host "  当前版本: $dotnetVersion"
