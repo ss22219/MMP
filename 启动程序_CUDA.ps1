@@ -99,7 +99,7 @@ try {
                         Write-Host ""
                         Write-Host "正在更新..." -ForegroundColor Yellow
                         git stash 2>$null | Out-Null
-                        git pull origin main
+                        git pull origin master
                         
                         if ($LASTEXITCODE -eq 0) {
                             git stash pop 2>$null | Out-Null
@@ -115,7 +115,7 @@ try {
                         }
                         else {
                             Write-Host "✗ 更新失败" -ForegroundColor Red
-                            Write-Host "请尝试手动更新: git pull origin main" -ForegroundColor Yellow
+                            Write-Host "请尝试手动更新: git pull origin master" -ForegroundColor Yellow
                         }
                     }
                     else {

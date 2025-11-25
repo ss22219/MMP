@@ -124,7 +124,7 @@ function Do-Update {
         git stash 2>$null | Out-Null
         
         Write-Host "正在拉取最新代码..." -ForegroundColor Yellow
-        git pull origin main
+        git pull origin master
         
         if ($LASTEXITCODE -eq 0) {
             git stash pop 2>$null | Out-Null
@@ -140,7 +140,7 @@ function Do-Update {
         }
         else {
             Write-Host "✗ 更新失败" -ForegroundColor Red
-            Write-Host "请尝试手动更新: git pull origin main" -ForegroundColor Yellow
+            Write-Host "请尝试手动更新: git pull origin master" -ForegroundColor Yellow
         }
     }
     else {
@@ -208,7 +208,7 @@ try {
             Write-Host "  当前版本: $dotnetVersion" -ForegroundColor Yellow
             Write-Host ""
             Write-Host "请从以下地址安装 .NET 10 SDK:" -ForegroundColor Yellow
-            Write-Host "  https://dotnet.microsoft.com/download/dotnet/10.0" -ForegroundColor White
+            Write-Host "  https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.100/dotnet-sdk-10.0.100-win-x64.exe" -ForegroundColor White
             Write-Host ""
             $choice = Read-Host "是否继续? (y/n)"
             if ($choice -ne "y") {
@@ -221,7 +221,7 @@ catch {
     Write-Host "✗ 未检测到 .NET SDK" -ForegroundColor Red
     Write-Host ""
     Write-Host "请从以下地址安装 .NET 10 SDK:" -ForegroundColor Yellow
-    Write-Host "  https://dotnet.microsoft.com/download/dotnet/10.0" -ForegroundColor White
+    Write-Host "  https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.100/dotnet-sdk-10.0.100-win-x64.exe" -ForegroundColor White
     Write-Host ""
     $choice = Read-Host "是否继续? (y/n)"
     if ($choice -ne "y") {

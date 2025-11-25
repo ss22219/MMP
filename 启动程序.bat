@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 chcp 65001 >nul
 
 :: MMP 启动脚本 - 调用 PowerShell 版本
