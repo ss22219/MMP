@@ -50,9 +50,9 @@ namespace MMP.States
                     if (string.IsNullOrEmpty(e.Name) || e.Name == "None")
                         return false;
 
-                    // 300米以内
+                    // 检测范围内
                     float distance = CalculateDistance(cameraLoc, e.Position);
-                    if (distance > 30000)
+                    if (distance > context.Config.Battle.MonsterDetectionRange)
                         return false;
 
                     // 必须存活
@@ -80,8 +80,8 @@ namespace MMP.States
                 
                 Console.WriteLine($"  → 目标: {nearestMonster.Name} 距离: {targetDistance / 100:F1}米");
 
-                // 如果怪物距离太远（>30米），先移动靠近
-                if (targetDistance > 3000)
+                // 如果怪物距离太远，先移动靠近
+                if (targetDistance > context.Config.Battle.ApproachDistance)
                 {
                     string monsterKey = $"{nearestMonster.Name}_{nearestMonster.EntityId}";
 
@@ -127,8 +127,11 @@ namespace MMP.States
                 // 调整视角对准怪物
                 await context.AdjustCameraToTargetAsync(nearestMonster.Position, ct);
 
-                // 技能使用逻辑：Q 后每秒按一次 E，连续 4 次
-                if ((DateTime.Now - _lastSkillTime).TotalMilliseconds > 1000)
+                // 技能使用逻辑：Q 后按间隔释放 E 技能
+                var config = context.Config.Battle;
+                var skillInterval = _skillECount == 0 ? config.QSkillInterval : config.ESkillInterval;
+                
+                if ((DateTime.Now - _lastSkillTime).TotalMilliseconds > skillInterval)
                 {
                     if (_skillECount == 0)
                     {
@@ -138,15 +141,15 @@ namespace MMP.States
                         _lastSkillTime = DateTime.Now;
                         _skillECount++;
                     }
-                    else if (_skillECount < 4)
+                    else if (_skillECount < config.ESkillCount)
                     {
-                        Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] → 使用技能 E ({_skillECount}/4)");
+                        Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] → 使用技能 E ({_skillECount}/{config.ESkillCount})");
                         context.Controller.SendKey("E", 0.1);
                         await Task.Delay(100, ct);
                         _lastSkillTime = DateTime.Now;
                         _skillECount++;
 
-                        if (_skillECount >= 4)
+                        if (_skillECount >= config.ESkillCount)
                         {
                             Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] ✓ 技能循环完成，重置计数");
                             _skillECount = 0;
@@ -154,13 +157,13 @@ namespace MMP.States
                     }
                 }
 
-                // 攻击3次
-                for (int i = 0; i < 3; i++)
+                // 攻击
+                for (int i = 0; i < config.AttackCount; i++)
                 {
                     context.Controller.MouseDown(-1, -1, "right");
-                    await Task.Delay(350, ct);
+                    await Task.Delay(config.AttackInterval, ct);
                     context.Controller.MouseUp(-1, -1, "right");
-                    await Task.Delay(50, ct);
+                    await Task.Delay(config.AttackRecoveryDelay, ct);
                 }
             }
             catch (Exception ex)

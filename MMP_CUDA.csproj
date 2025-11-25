@@ -1,11 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
+    <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <UseWPF>true</UseWPF>
   </PropertyGroup>
 
   <ItemGroup>
@@ -39,7 +40,6 @@
     <Compile Remove="test_simple\**\*.cs" />
     <Compile Remove="resource\**\*.cs" />
     <None Include="test_simple\**\*.cs" />
-    <None Include="OcrEngine_CUDA.cs" />
     
     <!-- 排除 test 目录 -->
     <Compile Remove="test\**\*" />

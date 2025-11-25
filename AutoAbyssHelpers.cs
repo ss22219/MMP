@@ -153,7 +153,7 @@ namespace MMP
                     bool hasFireMechanism = entities.Any(e =>
                         ((e.Name == "BP_OpenUIMechanism_Rouge_C" && e.CanOpen && !e.OpenState) ||
                          (e.IsActor && e.Name == "BP_Paotai_Rouge01_C")) &&
-                        CalculateDistance(cameraLoc, e.Position) <= 10000);
+                        CalculateDistance(cameraLoc, e.Position) <= _config.Battle.ApproachDistance * 3);
 
                     if (hasFireMechanism)
                     {
@@ -186,7 +186,7 @@ namespace MMP
                         bool hasDeliveryPoint = entities.Any(e =>
                             e.IsActor &&
                             e.ClassName.Contains("RougeLikeDelivery") &&
-                            CalculateDistance(cameraLoc, e.Position) <= 30000);
+                            CalculateDistance(cameraLoc, e.Position) <= _config.Battle.MonsterDetectionRange);
 
                         if (hasDeliveryPoint)
                         {
@@ -236,7 +236,7 @@ namespace MMP
                         (e.ClassName.StartsWith("BP_Mon_") || e.ClassName.StartsWith("BP_Boss_")) &&
                         e.ParentClasses.Any(c => c.Contains("MonsterCharacter")) &&
                         !e.AlreadyDead &&
-                        CalculateDistance(cameraLoc, e.Position) <= 30000);
+                        CalculateDistance(cameraLoc, e.Position) <= _config.Battle.MonsterDetectionRange);
 
                     if (hasMonsters)
                     {

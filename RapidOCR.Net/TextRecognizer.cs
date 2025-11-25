@@ -4,6 +4,7 @@
 
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Text;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
@@ -17,9 +18,9 @@ namespace RapidOcrNet
         private const int CrnnDstHeight = 48;
         //private const int CrnnCols = 6625;
 
-        private InferenceSession _crnnNet;
-        private string[] _keys;
-        private string _inputName;
+        private InferenceSession _crnnNet = null!;
+        private string[] _keys = null!;
+        private string _inputName = null!;
 
         public void InitModel(string path, string keysPath, int numThread)
         {

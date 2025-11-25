@@ -177,7 +177,7 @@ namespace RapidOcrNet
             /// <summary>
             /// Vertices.
             /// </summary>
-            internal List<PointF> points;
+            internal List<PointF> points = new();
 
             /// <summary>
             /// Unique ID, starts from 2.

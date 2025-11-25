@@ -3,6 +3,7 @@
 // https://github.com/RapidAI/RapidOCR/blob/92aec2c1234597fa9c3c270efd2600c83feecd8d/dotnet/RapidOcrOnnxCs/OcrLib/OcrLite.cs
 
 using System.Drawing;
+using System.IO;
 using System.Text;
 
 namespace RapidOcrNet
@@ -102,7 +103,7 @@ namespace RapidOcrNet
 //#endif
 
             // getPartImages
-            Bitmap[] partImages = OcrUtils.GetPartImages(src, textBoxes).ToArray();
+            Bitmap[] partImages = textBoxes != null ? OcrUtils.GetPartImages(src, textBoxes).ToArray() : Array.Empty<Bitmap>();
 
             // step: angleNet getAngles
             Angle[] angles = _textClassifier.GetAngles(partImages, doAngle, mostAngle);
@@ -129,6 +130,8 @@ namespace RapidOcrNet
             var textBlocks = new TextBlock[textLines.Length];
             for (int i = 0; i < textLines.Length; ++i)
             {
+                if (textBoxes == null || i >= textBoxes.Count) continue;
+                
                 var textBox = textBoxes[i];
                 var angle = angles[i];
                 var textLine = textLines[i];
@@ -149,8 +152,8 @@ namespace RapidOcrNet
                     AngleIndex = angle.Index,
                     AngleScore = angle.Score,
                     AngleTime = angle.Time,
-                    Chars = textLine.Chars,
-                    CharScores = textLine.CharScores,
+                    Chars = textLine.Chars ?? Array.Empty<string>(),
+                    CharScores = textLine.CharScores ?? Array.Empty<float>(),
                     CrnnTime = textLine.Time,
                     BlockTime = angle.Time + textLine.Time
                 };

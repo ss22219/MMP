@@ -3,6 +3,7 @@
 // https://github.com/RapidAI/RapidOCR/blob/92aec2c1234597fa9c3c270efd2600c83feecd8d/dotnet/RapidOcrOnnxCs/OcrLib/AngleNet.cs
 
 using System.Drawing;
+using System.IO;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 
@@ -17,8 +18,8 @@ namespace RapidOcrNet
         private readonly float[] _meanValues = [127.5F, 127.5F, 127.5F];
         private readonly float[] _normValues = [1.0F / 127.5F, 1.0F / 127.5F, 1.0F / 127.5F];
 
-        private InferenceSession _angleNet;
-        private string _inputName;
+        private InferenceSession _angleNet = null!;
+        private string _inputName = null!;
 
         public void InitModel(string path, int numThread)
         {

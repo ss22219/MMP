@@ -18,8 +18,8 @@ namespace MMP.States
 
             Console.WriteLine("[簧火机关交互]");
 
-            var tab = ocrResult.Regions.FirstOrDefault(r => r.Text.Contains("确定"));
-            if (tab != null)
+            var tab = ocrResult?.Regions.FirstOrDefault(r => r.Text.Contains("确定"));
+            if (tab != null && context.Controller != null)
             {
                 Console.WriteLine($"  → 点击 [确定]");
                 context.Controller.Click((int)tab.Center.X, (int)tab.Center.Y);

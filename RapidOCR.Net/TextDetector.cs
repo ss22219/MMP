@@ -5,6 +5,7 @@
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Drawing.Drawing2D;
+using System.IO;
 using System.Runtime.InteropServices;
 using Clipper2Lib;
 using Microsoft.ML.OnnxRuntime;
@@ -17,8 +18,8 @@ namespace RapidOcrNet
         private readonly float[] MeanValues = [0.485F * 255F, 0.456F * 255F, 0.406F * 255F];
         private readonly float[] NormValues = [1.0F / 0.229F / 255.0F, 1.0F / 0.224F / 255.0F, 1.0F / 0.225F / 255.0F];
 
-        private InferenceSession _dbNet;
-        private string _inputName;
+        private InferenceSession _dbNet = null!;
+        private string _inputName = null!;
 
         public void InitModel(string path, int numThread)
         {
@@ -50,7 +51,7 @@ namespace RapidOcrNet
             _inputName = _dbNet.InputMetadata.Keys.First();
         }
 
-        public IReadOnlyList<TextBox> GetTextBoxes(Bitmap src, ScaleParam scale, float boxScoreThresh, float boxThresh,
+        public IReadOnlyList<TextBox>? GetTextBoxes(Bitmap src, ScaleParam scale, float boxScoreThresh, float boxThresh,
             float unClipRatio)
         {
             Tensor<float> inputTensors;

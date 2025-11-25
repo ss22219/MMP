@@ -38,7 +38,7 @@ namespace RapidOcrNet
 
         public override string ToString()
         {
-            return $"TextLine[Text({string.Concat(Chars)}),CharScores({string.Join(",", CharScores)}),Time({Time}ms)]";
+            return $"TextLine[Text({string.Concat(Chars ?? Array.Empty<string>())}),CharScores({string.Join(",", CharScores ?? Array.Empty<float>())}),Time({Time}ms)]";
         }
     }
 

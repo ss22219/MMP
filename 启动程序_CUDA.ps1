@@ -223,6 +223,7 @@ if (-not $nvidiaSmi) {
             { $_ -in @("80", "86") } { "Sdcb.PaddleInference.runtime.win64.cu129_cudnn910_sm80" }
             "89" { "Sdcb.PaddleInference.runtime.win64.cu129_cudnn910_sm89" }
             "90" { "Sdcb.PaddleInference.runtime.win64.cu129_cudnn910_sm90" }
+            { $_ -in @("100", "120") } { "Sdcb.PaddleInference.runtime.win64.cu129_cudnn910_sm120" }
             default { "Sdcb.PaddleInference.runtime.win64.cu129_cudnn910_sm89" }
         }
         

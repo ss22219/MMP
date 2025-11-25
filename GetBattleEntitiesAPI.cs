@@ -205,7 +205,7 @@ public class BattleEntitiesAPI
     // 实体缓存（100ms）
     private List<EntityInfo>? _cachedEntities = null;
     private DateTime _lastCacheTime = DateTime.MinValue;
-    private const int CACHE_DURATION_MS = 100;
+    private const int CACHE_DURATION_MS = 200;
 
     public BattleEntitiesAPI(string processName)
     {

@@ -47,16 +47,19 @@ namespace MMP
         private OcrEngine? _ocrEngine;
         private KeyboardMouseController? _controller;
         private BattleEntitiesAPI? _battleApi;
+        private AppConfig _config = new();
         
         // 状态数据
         private DateTime _stateStartTime = DateTime.Now;
         
         // 状态处理器缓存（保持实例状态）
         private readonly Dictionary<GameState, IStateHandler> _stateHandlers = new();
-        private int _stateTimeoutSeconds = 300; // 5分钟超时
         
         // 状态上下文
         private StateContext? _stateContext;
+        
+        // 同步上下文（用于停止）
+        private SingleThreadSyncContext? _syncContext;
         
         public GameState CurrentState
         {
@@ -71,59 +74,72 @@ namespace MMP
 
             StartOcrThread();
             StartExitMonitorThread();
-            var context = new SingleThreadSyncContext();
-            SynchronizationContext.SetSynchronizationContext(context);
+            
+            // 如果当前有同步上下文（WPF Dispatcher），直接使用它
+            var currentContext = SynchronizationContext.Current;
+            if (currentContext != null)
+            {
+                // 在当前同步上下文（WPF UI 线程）上运行
+                currentContext.Post(async _ =>
+                {
+                    await MainLoopAsync();
+                }, null);
+            }
+            else
+            {
+                // 没有同步上下文，使用自定义的单线程上下文
+                _syncContext = new SingleThreadSyncContext();
+                SynchronizationContext.SetSynchronizationContext(_syncContext);
 
-            context.Post(async _ =>
+                _syncContext.Post(async _ =>
+                {
+                    await MainLoopAsync();
+                    _syncContext.Complete();
+                }, null);
+
+                _syncContext.RunOnCurrentThread();
+                Cleanup();
+            }
+        }
+        
+        /// <summary>
+        /// 异步运行状态机（用于 WPF）
+        /// </summary>
+        public async Task RunAsync()
+        {
+            if (!Initialize())
+                return;
+
+            StartOcrThread();
+            StartExitMonitorThread();
+            
+            // 在后台线程运行主循环，避免阻塞 UI
+            await Task.Run(async () =>
             {
                 await MainLoopAsync();
-                context.Complete();
-            }, null);
-
-            context.RunOnCurrentThread();
+            });
+            
             Cleanup();
         }
 
+        /// <summary>
+        /// 停止状态机
+        /// </summary>
+        public void Stop()
+        {
+            Console.WriteLine("[状态机] 正在停止...");
+            _shouldStop = true;
+            _currentStateCts?.Cancel();
+            _currentWaitCts?.Cancel();
+            
+            // 完成同步上下文，让 RunOnCurrentThread 退出
+            _syncContext?.Complete();
+        }
+
+        // 热键监听已移至 UI 层，此方法保留为空以保持兼容性
         private void StartExitMonitorThread()
         {
-            var exitThread = new Thread(() =>
-            {
-                Console.WriteLine("[退出监听] 启动，按 F10 强制退出程序，按 F12 强制退出深渊");
-                bool lastF10State = false;
-                bool lastF12State = false;
-                
-                while (!_shouldStop)
-                {
-                    bool currentF10State = (GetAsyncKeyState(0x79) & 0x8000) != 0; // 0x79 = F10
-                    bool currentF12State = (GetAsyncKeyState(0x7B) & 0x8000) != 0; // 0x7B = F12
-
-                    // F10: 强制退出程序
-                    if (currentF10State && !lastF10State)
-                    {
-                        Console.WriteLine("\n[F10] 强制退出程序");
-                        Environment.Exit(0);
-                    }
-
-                    // F12: 强制退出深渊
-                    if (currentF12State && !lastF12State)
-                    {
-                        Console.WriteLine("\n[F12] 强制退出深渊");
-                        PerformForceExitAbyss();
-                    }
-
-                    lastF10State = currentF10State;
-                    lastF12State = currentF12State;
-                    Thread.Sleep(50);
-                }
-                
-                Console.WriteLine("[退出监听] 停止");
-            })
-            {
-                IsBackground = true,
-                Name = "Exit Monitor Thread"
-            };
-
-            exitThread.Start();
+            // 热键功能现在由 WPF UI 处理
         }
 
         /// <summary>
@@ -143,13 +159,18 @@ namespace MMP
             ResetAllStateHandlers();
         }
 
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        static extern short GetAsyncKeyState(int vKey);
-
         private bool Initialize()
         {
             Console.WriteLine("=== 深渊自动化状态机 ===");
             Console.WriteLine("按 F10 强制退出");
+            Console.WriteLine();
+
+            // 加载配置
+            _config = AppConfig.Load();
+            Console.WriteLine($"配置已加载:");
+            Console.WriteLine($"  - OCR 间隔: {_config.Ocr.OcrInterval}ms");
+            Console.WriteLine($"  - 状态超时: {_config.Timeouts.StateTimeout}秒");
+            Console.WriteLine($"  - 怪物检测距离: {_config.Battle.MonsterDetectionRange / 100}米");
             Console.WriteLine();
 
             // 查找游戏进程
@@ -197,6 +218,7 @@ namespace MMP
                 _hwnd, 
                 _controller, 
                 _battleApi,
+                _config,
                 GetLatestOcrResult,
                 handler => OnOcrCompleted += handler,
                 handler => OnOcrCompleted -= handler
@@ -212,7 +234,7 @@ namespace MMP
             _ocrThread = new Thread(() =>
             {
                 Console.WriteLine("[OCR线程] 启动");
-                const int OCR_INTERVAL_MS = 500; // OCR 间隔（毫秒）
+                int ocrIntervalMs = _config.Ocr.OcrInterval;
                 DateTime lastOcrTime = DateTime.MinValue;
                 int ocrCount = 0; // OCR 计数器
 
@@ -224,7 +246,7 @@ namespace MMP
                         var elapsed = (DateTime.Now - lastOcrTime).TotalMilliseconds;
                         
                         // 如果还没到间隔时间，等待
-                        if (elapsed < OCR_INTERVAL_MS)
+                        if (elapsed < ocrIntervalMs)
                         {
                             Thread.Sleep(50); // 短暂休眠，避免 CPU 空转
                             continue;
@@ -254,7 +276,7 @@ namespace MMP
 
                         // 计算本次 OCR 耗时（可选：用于监控性能）
                         var ocrDuration = (DateTime.Now - lastOcrTime).TotalMilliseconds;
-                        if (ocrDuration > OCR_INTERVAL_MS * 2)
+                        if (ocrDuration > ocrIntervalMs * 2)
                         {
                             Console.WriteLine($"[OCR线程] 警告: OCR 耗时 {ocrDuration:F0}ms，超过间隔时间");
                         }
@@ -303,7 +325,7 @@ namespace MMP
                 {
                     // 检查状态超时（ForceExiting 状态不检查超时）
                     if (CurrentState != GameState.ForceExiting && 
-                        (DateTime.Now - _stateStartTime).TotalSeconds > _stateTimeoutSeconds)
+                        (DateTime.Now - _stateStartTime).TotalSeconds > _config.Timeouts.StateTimeout)
                     {
                         Console.WriteLine($"⚠ 状态超时 ({CurrentState})，强制退出深渊");
                         TransitionTo(GameState.ForceExiting);
@@ -463,11 +485,13 @@ namespace MMP
             Console.WriteLine("✓ 清理完成");
         }
 
-        static void Main(string[] args)
-        {
-            var stateMachine = new AutoAbyssStateMachine();
-            stateMachine.Run();
-        }
+        // Main 方法已移至 App.xaml.cs（WPF 入口点）
+        // 如果需要控制台模式，可以取消注释以下代码：
+        // static void Main(string[] args)
+        // {
+        //     var stateMachine = new AutoAbyssStateMachine();
+        //     stateMachine.Run();
+        // }
     }
     
     public class SingleThreadSyncContext : SynchronizationContext

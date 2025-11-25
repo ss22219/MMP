@@ -13,6 +13,7 @@ namespace MMP.States
         public IntPtr WindowHandle { get; }
         public KeyboardMouseController? Controller { get; }
         public BattleEntitiesAPI? BattleApi { get; }
+        public AppConfig Config { get; }
         
         // OCR 相关
         private readonly Func<OcrEngine.OcrResult?> _getLatestOcrResult;
@@ -23,6 +24,7 @@ namespace MMP.States
             IntPtr windowHandle, 
             KeyboardMouseController? controller, 
             BattleEntitiesAPI? battleApi,
+            AppConfig config,
             Func<OcrEngine.OcrResult?> getLatestOcrResult,
             Action<Action<OcrEngine.OcrResult>> subscribeOcrEvent,
             Action<Action<OcrEngine.OcrResult>> unsubscribeOcrEvent)
@@ -30,6 +32,7 @@ namespace MMP.States
             WindowHandle = windowHandle;
             Controller = controller;
             BattleApi = battleApi;
+            Config = config;
             _getLatestOcrResult = getLatestOcrResult;
             _subscribeOcrEvent = subscribeOcrEvent;
             _unsubscribeOcrEvent = unsubscribeOcrEvent;
@@ -216,6 +219,8 @@ namespace MMP.States
             Controller.SendKeyDown("W");
             await Task.Delay(300, ct);
             Controller.SendKeyDown("LSHIFT");
+            await Task.Delay(1000, ct);
+            Controller.MouseUp(key: "right");
         }
 
         /// <summary>
