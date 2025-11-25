@@ -323,6 +323,7 @@ namespace MMP
             {
                 try
                 {
+                    _controller.Activate();
                     // 检查状态超时（ForceExiting 状态不检查超时）
                     if (CurrentState != GameState.ForceExiting && 
                         (DateTime.Now - _stateStartTime).TotalSeconds > _config.Timeouts.StateTimeout)

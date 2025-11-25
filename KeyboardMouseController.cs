@@ -223,7 +223,7 @@ namespace MMP
         /// <summary>
         /// 激活窗口
         /// </summary>
-        private void Activate()
+        public void Activate()
         {
             Debug.WriteLine($"[KeyboardMouseController] Activate {_hwnd:X}");
             SetForegroundWindow(_hwnd);

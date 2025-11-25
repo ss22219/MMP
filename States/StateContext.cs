@@ -219,7 +219,7 @@ namespace MMP.States
             Controller.SendKeyDown("W");
             await Task.Delay(300, ct);
             Controller.SendKeyDown("LSHIFT");
-            await Task.Delay(1000, ct);
+            await Task.Delay(1500, ct);
             Controller.MouseUp(key: "right");
         }
 
