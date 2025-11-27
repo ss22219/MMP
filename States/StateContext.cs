@@ -71,7 +71,7 @@ namespace MMP.States
                         return true;
                 }
 
-                await Task.Delay(50, ct);
+                await Task.Delay(200, ct);
             }
 
             return false;
@@ -95,7 +95,7 @@ namespace MMP.States
                 if (disappeared)
                     return true;
 
-                await Task.Delay(50, ct);
+                await Task.Delay(200, ct);
             }
 
             return false;
@@ -135,7 +135,7 @@ namespace MMP.States
                     }
                 }
 
-                await Task.Delay(50, ct);
+                await Task.Delay(200, ct);
             }
 
             Console.WriteLine($"  [等待点击] 超时，未找到 [{string.Join(", ", buttonTexts)}]");

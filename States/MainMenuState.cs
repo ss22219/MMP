@@ -25,7 +25,7 @@ namespace MMP.States
                 {
                     Console.WriteLine($"[主菜单] 点击 {targetBtn.Text}");
                     context.Controller.Click((int)targetBtn.Center.X, (int)targetBtn.Center.Y + 5);
-                    if(await context.WaitAndClickAsync(new[] { "开始探索", "继续探索" }, 3000, ct))
+                    if(await context.WaitAndClickAsync(new[] { "开始探索", "继续探索" }, 20000, ct))
                         break;
                 }
             }

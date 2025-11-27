@@ -292,13 +292,9 @@ if (-not $nvidiaSmi) {
         
         # 根据 SM 版本确定 NuGet 包名
         $nugetPackage = switch ($smVersion) {
-            { $_ -in @("50", "52", "53") } { "Sdcb.PaddleInference.runtime.win64.cu129_cudnn910_sm50" }
-            { $_ -in @("60", "61", "62") } { "Sdcb.PaddleInference.runtime.win64.cu129_cudnn910_sm60" }
-            { $_ -in @("70", "72") } { "Sdcb.PaddleInference.runtime.win64.cu129_cudnn910_sm70" }
             "75" { "Sdcb.PaddleInference.runtime.win64.cu129_cudnn910_sm75" }
-            { $_ -in @("80", "86") } { "Sdcb.PaddleInference.runtime.win64.cu129_cudnn910_sm80" }
+            { $_ -in @("80", "86") } { "Sdcb.PaddleInference.runtime.win64.cu129_cudnn910_sm86" }
             "89" { "Sdcb.PaddleInference.runtime.win64.cu129_cudnn910_sm89" }
-            "90" { "Sdcb.PaddleInference.runtime.win64.cu129_cudnn910_sm90" }
             { $_ -in @("100", "120") } { "Sdcb.PaddleInference.runtime.win64.cu129_cudnn910_sm120" }
             default { "Sdcb.PaddleInference.runtime.win64.cu129_cudnn910_sm89" }
         }
