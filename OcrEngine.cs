@@ -1,17 +1,18 @@
-using System.Drawing;
+using SkiaSharp;
 using RapidOcrNet;
 
 namespace MMP
 {
     /// <summary>
     /// OCR 引擎，用于识别游戏画面中的文字
-    /// 使用 RapidOCR.Net 库
+    /// 使用 RapidOCR.Net 库 + DirectML GPU 加速
     /// </summary>
     public class OcrEngine : IDisposable
     {
         private RapidOcr? _ocr;
         private bool _disposed = false;
         private readonly RapidOcrOptions _options;
+        private readonly bool _useGpu;
 
         /// <summary>
         /// OCR 识别结果
@@ -52,31 +53,33 @@ namespace MMP
             /// <summary>
             /// 中心点坐标
             /// </summary>
-            public PointF Center { get; set; }
+            public SKPoint Center { get; set; }
 
             /// <summary>
             /// 边界框的四个顶点
             /// </summary>
-            public PointF[] BoundingBox { get; set; } = [];
+            public SKPoint[] BoundingBox { get; set; } = [];
         }
 
         /// <summary>
         /// 创建 OCR 引擎实例
         /// </summary>
+        /// <param name="useGpu">是否使用 GPU 加速（DirectML）</param>
         /// <param name="options">OCR 选项，如果为 null 则使用默认选项</param>
-        public OcrEngine(RapidOcrOptions? options = null)
+        public OcrEngine(bool useGpu = true, RapidOcrOptions? options = null)
         {
+            _useGpu = useGpu;
             _options = options ?? RapidOcrOptions.Default;
-            Console.WriteLine("[OcrEngine] 使用 RapidOCR.Net");
+            Console.WriteLine($"[OcrEngine] 使用 RapidOCR.Net + DirectML，GPU 加速: {(_useGpu ? "启用" : "禁用")}");
         }
 
         /// <summary>
         /// 初始化 OCR 引擎
         /// </summary>
-        /// <param name="detPath">检测模型路径（可选，默认使用 models/ch_PP-OCRv5_mobile_det.onnx）</param>
-        /// <param name="clsPath">分类模型路径（可选，默认使用 models/ch_ppocr_mobile_v2.0_cls_infer.onnx）</param>
-        /// <param name="recPath">识别模型路径（可选，默认使用 models/ch_PP-OCRv5_rec_mobile_infer.onnx）</param>
-        /// <param name="keysPath">字典路径（可选，默认使用 models/ppocrv5_dict.txt）</param>
+        /// <param name="detPath">检测模型路径（可选，默认使用嵌入的模型）</param>
+        /// <param name="clsPath">分类模型路径（可选，默认使用嵌入的模型）</param>
+        /// <param name="recPath">识别模型路径（可选，默认使用嵌入的模型）</param>
+        /// <param name="keysPath">字典路径（可选，默认使用嵌入的模型）</param>
         /// <param name="numThread">线程数（0 表示自动）</param>
         public void Initialize(string? detPath = null, string? clsPath = null, string? recPath = null, string? keysPath = null, int numThread = 16)
         {
@@ -85,19 +88,32 @@ namespace MMP
 
             _ocr = new RapidOcr();
             
-            // 使用中文 PP-OCRv5 模型
-            detPath ??= "models/ch_PP-OCRv5_mobile_det.onnx";
-            clsPath ??= "models/ch_ppocr_mobile_v2.0_cls_infer.onnx";
-            recPath ??= "models/ch_PP-OCRv5_rec_mobile_infer.onnx";
-            keysPath ??= "models/ppocrv5_dict.txt";
+            // 提取嵌入的模型文件
+            EmbeddedResourceHelper.EnsureModelsExtracted();
             
-            _ocr.InitModels(detPath, clsPath, recPath, keysPath, numThread);
+            // 使用中文 PP-OCRv5 模型（优先使用嵌入的资源）
+            detPath ??= EmbeddedResourceHelper.GetModelPath("ch_PP-OCRv5_mobile_det.onnx");
+            clsPath ??= EmbeddedResourceHelper.GetModelPath("ch_ppocr_mobile_v2.0_cls_infer.onnx");
+            recPath ??= EmbeddedResourceHelper.GetModelPath("ch_PP-OCRv5_rec_mobile_infer.onnx");
+            keysPath ??= EmbeddedResourceHelper.GetModelPath("ppocrv5_dict.txt");
+            
+            // 如果嵌入资源不存在，尝试使用本地 models 目录
+            if (!File.Exists(detPath))
+                detPath = "models/ch_PP-OCRv5_mobile_det.onnx";
+            if (!File.Exists(clsPath))
+                clsPath = "models/ch_ppocr_mobile_v2.0_cls_infer.onnx";
+            if (!File.Exists(recPath))
+                recPath = "models/ch_PP-OCRv5_rec_mobile_infer.onnx";
+            if (!File.Exists(keysPath))
+                keysPath = "models/ppocrv5_dict.txt";
+            
+            _ocr.InitModels(detPath, clsPath, recPath, keysPath, numThread, _useGpu);
         }
 
         /// <summary>
-        /// 识别 Bitmap 图像中的文字
+        /// 识别 SKBitmap 图像中的文字
         /// </summary>
-        public OcrResult Recognize(Bitmap bitmap)
+        public OcrResult Recognize(SKBitmap bitmap)
         {
             if (_ocr == null)
                 throw new InvalidOperationException("OCR 引擎未初始化，请先调用 Initialize()");
@@ -112,17 +128,6 @@ namespace MMP
             if (bitmap.Width <= 0 || bitmap.Height <= 0)
             {
                 Console.WriteLine($"[OcrEngine] 警告: bitmap 尺寸无效 ({bitmap.Width}x{bitmap.Height})，返回空结果");
-                return new OcrResult();
-            }
-
-            try
-            {
-                // 尝试访问 bitmap 数据以确保它是有效的
-                var pixelFormat = bitmap.PixelFormat;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[OcrEngine] 警告: bitmap 数据无效: {ex.Message}");
                 return new OcrResult();
             }
 
@@ -178,7 +183,7 @@ namespace MMP
         /// <summary>
         /// 在指定区域内查找包含特定文本的区域
         /// </summary>
-        public List<OcrTextRegion> FindText(Bitmap bitmap, string searchText, bool ignoreCase = true)
+        public List<OcrTextRegion> FindText(SKBitmap bitmap, string searchText, bool ignoreCase = true)
         {
             var result = Recognize(bitmap);
             var comparison = ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
@@ -188,7 +193,7 @@ namespace MMP
         /// <summary>
         /// 检查图像中是否包含指定文本
         /// </summary>
-        public bool ContainsText(Bitmap bitmap, string searchText, bool ignoreCase = true)
+        public bool ContainsText(SKBitmap bitmap, string searchText, bool ignoreCase = true)
         {
             return FindText(bitmap, searchText, ignoreCase).Count > 0;
         }
@@ -196,44 +201,68 @@ namespace MMP
         /// <summary>
         /// 识别指定区域的文字
         /// </summary>
-        public OcrResult RecognizeRegion(Bitmap bitmap, Rectangle region)
+        public OcrResult RecognizeRegion(SKBitmap bitmap, SKRectI region)
         {
-            using var croppedBitmap = bitmap.Clone(region, bitmap.PixelFormat);
-            return Recognize(croppedBitmap);
+            var croppedBitmap = new SKBitmap(region.Width, region.Height);
+            if (!bitmap.ExtractSubset(croppedBitmap, region))
+            {
+                throw new Exception("无法提取图像子集");
+            }
+            
+            var result = Recognize(croppedBitmap);
+            croppedBitmap.Dispose();
+            return result;
         }
 
         /// <summary>
         /// 将识别结果可视化到图像上
         /// </summary>
-        public static Bitmap VisualizeResult(Bitmap originalBitmap, OcrResult result)
+        public static SKBitmap VisualizeResult(SKBitmap originalBitmap, OcrResult result)
         {
-            var visualized = new Bitmap(originalBitmap);
-            using var graphics = Graphics.FromImage(visualized);
-            using var pen = new Pen(Color.Red, 2);
-            using var font = new Font("Microsoft YaHei", 12);
-            using var textBrush = new SolidBrush(Color.Yellow);
-            using var bgBrush = new SolidBrush(Color.FromArgb(128, 0, 0, 0));
+            var visualized = originalBitmap.Copy();
+            using var canvas = new SKCanvas(visualized);
+            using var paint = new SKPaint
+            {
+                Style = SKPaintStyle.Stroke,
+                Color = SKColors.Red,
+                StrokeWidth = 2,
+                IsAntialias = true
+            };
+            using var textPaint = new SKPaint
+            {
+                Color = SKColors.Yellow,
+                TextSize = 20,
+                IsAntialias = true
+            };
+            using var bgPaint = new SKPaint
+            {
+                Color = new SKColor(0, 0, 0, 128),
+                Style = SKPaintStyle.Fill
+            };
 
             foreach (var region in result.Regions)
             {
                 // 绘制边界框
                 if (region.BoundingBox.Length == 4)
                 {
-                    for (int i = 0; i < 4; i++)
+                    var path = new SKPath();
+                    path.MoveTo(region.BoundingBox[0]);
+                    for (int i = 1; i < 4; i++)
                     {
-                        var p1 = region.BoundingBox[i];
-                        var p2 = region.BoundingBox[(i + 1) % 4];
-                        graphics.DrawLine(pen, p1, p2);
+                        path.LineTo(region.BoundingBox[i]);
                     }
+                    path.Close();
+                    canvas.DrawPath(path, paint);
                 }
 
                 // 绘制文本
-                var textSize = graphics.MeasureString(region.Text, font);
-                float textX = region.Center.X - textSize.Width / 2;
-                float textY = region.Center.Y - textSize.Height - 2;
+                var textBounds = new SKRect();
+                textPaint.MeasureText(region.Text, ref textBounds);
+                float textX = region.Center.X - textBounds.Width / 2;
+                float textY = region.Center.Y - textBounds.Height - 2;
 
-                graphics.FillRectangle(bgBrush, textX, textY, textSize.Width, textSize.Height);
-                graphics.DrawString(region.Text, font, textBrush, textX, textY);
+                canvas.DrawRect(textX, textY, textBounds.Width, textBounds.Height, bgPaint);
+                canvas.DrawText(region.Text, textX, textY + textBounds.Height, textPaint);
             }
 
             return visualized;
@@ -242,7 +271,7 @@ namespace MMP
         /// <summary>
         /// 计算边界框的中心点
         /// </summary>
-        private static PointF CalculateCenter(PointI[] points)
+        private static SKPoint CalculateCenter(SKPointI[] points)
         {
             float sumX = 0, sumY = 0;
             foreach (var p in points)
@@ -250,39 +279,25 @@ namespace MMP
                 sumX += p.X;
                 sumY += p.Y;
             }
-            return new PointF(sumX / points.Length, sumY / points.Length);
+            return new SKPoint(sumX / points.Length, sumY / points.Length);
         }
 
         /// <summary>
-        /// 转换 PointI 数组为 PointF 数组
+        /// 转换点坐标
         /// </summary>
-        private static PointF[] ConvertPoints(PointI[] points)
+        private static SKPoint[] ConvertPoints(SKPointI[] points)
         {
-            var result = new PointF[points.Length];
-            for (int i = 0; i < points.Length; i++)
-            {
-                result[i] = new PointF(points[i].X, points[i].Y);
-            }
-            return result;
+            return points.Select(p => new SKPoint(p.X, p.Y)).ToArray();
         }
 
-        /// <summary>
-        /// 释放资源
-        /// </summary>
         public void Dispose()
         {
             if (_disposed)
                 return;
 
             _ocr?.Dispose();
-            _ocr = null;
             _disposed = true;
             GC.SuppressFinalize(this);
-        }
-
-        ~OcrEngine()
-        {
-            Dispose();
         }
     }
 }

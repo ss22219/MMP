@@ -3,6 +3,7 @@
 // https://github.com/UglyToad/PdfPig/blob/master/src/UglyToad.PdfPig/Geometry/GeometryExtensions.cs
 
 using System.Buffers;
+using SkiaSharp;
 
 namespace RapidOcrNet
 {
@@ -14,23 +15,23 @@ namespace RapidOcrNet
         /// <param name="point1">The first point.</param>
         /// <param name="point2">The second point.</param>
         /// <param name="point3">The third point.</param>
-        private static bool ccw(PointF point1, PointF point2, PointF point3)
+        private static bool ccw(SKPoint point1, SKPoint point2, SKPoint point3)
         {
             return (point2.X - point1.X) * (point3.Y - point1.Y) > (point2.Y - point1.Y) * (point3.X - point1.X);
         }
 
-        private sealed class PdfPointXYComparer : IComparer<PointF>
+        private sealed class PdfPointXYComparer : IComparer<SKPoint>
         {
             public static readonly PdfPointXYComparer Instance = new PdfPointXYComparer();
 
-            public int Compare(PointF p1, PointF p2)
+            public int Compare(SKPoint p1, SKPoint p2)
             {
                 int comp = p1.X.CompareTo(p2.X);
                 return comp == 0 ? p1.Y.CompareTo(p2.Y) : comp;
             }
         }
 
-        private static float polarAngle(PointF point1, PointF point2)
+        private static float polarAngle(SKPoint point1, SKPoint point2)
         {
             // This is used for grouping, we could use Math.Round()
             return MathF.Atan2(point2.Y - point1.Y, point2.X - point1.X) % MathF.PI;
@@ -39,7 +40,7 @@ namespace RapidOcrNet
         /// <summary>
         /// Algorithm to find the convex hull of the set of points with time complexity O(n log n).
         /// </summary>
-        public static IReadOnlyCollection<PointF> GrahamScan(PointF[] points)
+        public static IReadOnlyCollection<SKPoint> GrahamScan(SKPoint[] points)
         {
             if (points is null || points.Length == 0)
             {
@@ -57,7 +58,7 @@ namespace RapidOcrNet
             var P0 = points[0];
             var groups = points.Skip(1).GroupBy(p => polarAngle(P0, p)).OrderBy(g => g.Key).ToArray();
 
-            var sortedPoints = ArrayPool<PointF>.Shared.Rent(groups.Length);
+            var sortedPoints = ArrayPool<SKPoint>.Shared.Rent(groups.Length);
 
             try
             {
@@ -86,7 +87,7 @@ namespace RapidOcrNet
                     return [P0, sortedPoints[0]];
                 }
 
-                var stack = new Stack<PointF>();
+                var stack = new Stack<SKPoint>();
                 stack.Push(P0);
                 stack.Push(sortedPoints[0]);
                 stack.Push(sortedPoints[1]);
@@ -106,7 +107,7 @@ namespace RapidOcrNet
             }
             finally
             {
-                ArrayPool<PointF>.Shared.Return(sortedPoints);
+                ArrayPool<SKPoint>.Shared.Return(sortedPoints);
             }
         }
 
@@ -115,7 +116,7 @@ namespace RapidOcrNet
         /// and then finding its MAR.
         /// </summary>
         /// <param name="points">The points.</param>
-        public static PointF[] MinimumAreaRectangle(PointF[] points)
+        public static SKPoint[] MinimumAreaRectangle(SKPoint[] points)
         {
             if (points is null || points.Length == 0)
             {
@@ -135,7 +136,7 @@ namespace RapidOcrNet
         /// The vertices of P are assumed to be in strict cyclic sequential order, either clockwise or
         /// counter-clockwise relative to the origin P0.
         /// </param>
-        private static PointF[] ParametricPerpendicularProjection(ReadOnlySpan<PointF> polygon)
+        private static SKPoint[] ParametricPerpendicularProjection(ReadOnlySpan<SKPoint> polygon)
         {
             if (polygon.Length == 0)
             {
@@ -167,8 +168,8 @@ namespace RapidOcrNet
 
             while (true)
             {
-                PointF Pk = polygon[k];
-                PointF Pj = polygon[j];
+                SKPoint Pk = polygon[k];
+                SKPoint Pj = polygon[j];
 
                 float vX = Pj.X - Pk.X;
                 float vY = Pj.Y - Pk.Y;
@@ -220,7 +221,7 @@ namespace RapidOcrNet
 
                 if (l != -1)
                 {
-                    PointF Pl = polygon[l];
+                    SKPoint Pl = polygon[l];
                     float PlMinusQX = Pl.X - QX;
                     float PlMinusQY = Pl.Y - QY;
 
@@ -259,26 +260,19 @@ namespace RapidOcrNet
 
             return
             [
-                new PointF(mrb[4], mrb[5]),
-                new PointF(mrb[6], mrb[7]),
-                new PointF(mrb[2], mrb[3]),
-                new PointF(mrb[0], mrb[1])
+                new SKPoint(mrb[4], mrb[5]),
+                new SKPoint(mrb[6], mrb[7]),
+                new SKPoint(mrb[2], mrb[3]),
+                new SKPoint(mrb[0], mrb[1])
             ];
         }
 
-        public static void GetSize(PointF[] points, out float width, out float height)
+        public static void GetSize(SKPoint[] points, out float width, out float height)
         {
-            if (points == null || points.Length < 4)
-            {
-                width = 0;
-                height = 0;
-                return;
-            }
-
-            PointF topLeft = points[0];
+            SKPoint topLeft = points[0];
             //PointF topRight = points[1];
-            PointF bottomLeft = points[2];
-            PointF bottomRight = points[3];
+            SKPoint bottomLeft = points[2];
+            SKPoint bottomRight = points[3];
 
             width = MathF.Sqrt((bottomLeft.X - bottomRight.X) * (bottomLeft.X - bottomRight.X) + (bottomLeft.Y - bottomRight.Y) * (bottomLeft.Y - bottomRight.Y));
             height = MathF.Sqrt((bottomLeft.X - topLeft.X) * (bottomLeft.X - topLeft.X) + (bottomLeft.Y - topLeft.Y) * (bottomLeft.Y - topLeft.Y));

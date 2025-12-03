@@ -1,14 +1,13 @@
 using System;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
+using SkiaSharp;
 
 namespace MMP
 {
     /// <summary>
-    /// Provides screen capture functionality for game window
+    /// Provides screen capture functionality for game window using SkiaSharp
     /// </summary>
-    public class ScreenCapture
+    public partial class ScreenCapture
     {
         private static bool _dpiAwareSet = false;
 
@@ -36,12 +35,41 @@ namespace MMP
         [DllImport("user32.dll")]
         private static extern bool ClientToScreen(IntPtr hWnd, ref POINT lpPoint);
 
+        [DllImport("gdi32.dll")]
+        private static extern IntPtr CreateCompatibleDC(IntPtr hDC);
+
+        [DllImport("gdi32.dll")]
+        private static extern IntPtr CreateCompatibleBitmap(IntPtr hDC, int nWidth, int nHeight);
+
+        [DllImport("gdi32.dll")]
+        private static extern IntPtr SelectObject(IntPtr hDC, IntPtr hObject);
+
+        [DllImport("gdi32.dll")]
+        private static extern bool BitBlt(IntPtr hdcDest, int xDest, int yDest, int wDest, int hDest, IntPtr hdcSource, int xSrc, int ySrc, int rop);
+
+        [DllImport("gdi32.dll")]
+        private static extern bool DeleteDC(IntPtr hDC);
+
+        [DllImport("gdi32.dll")]
+        private static extern bool DeleteObject(IntPtr hObject);
+
         [StructLayout(LayoutKind.Sequential)]
         private struct POINT
         {
             public int X;
             public int Y;
         }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct RECT
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+        }
+
+        private const int SRCCOPY = 0x00CC0020;
 
         /// <summary>
         /// Enable DPI awareness to get true pixel dimensions (call once at startup)
@@ -55,149 +83,90 @@ namespace MMP
             }
         }
 
-        [DllImport("gdi32.dll")]
-        private static extern IntPtr CreateCompatibleDC(IntPtr hDC);
-
-        [DllImport("gdi32.dll")]
-        private static extern IntPtr CreateCompatibleBitmap(IntPtr hDC, int nWidth, int nHeight);
-
-        [DllImport("gdi32.dll")]
-        private static extern IntPtr SelectObject(IntPtr hDC, IntPtr hObject);
-
-        [DllImport("gdi32.dll")]
-        private static extern bool BitBlt(IntPtr hdcDest, int xDest, int yDest, int wDest, int hDest, IntPtr hdcSource, int xSrc, int ySrc, CopyPixelOperation rop);
-
-        [DllImport("gdi32.dll")]
-        private static extern bool DeleteDC(IntPtr hDC);
-
-        [DllImport("gdi32.dll")]
-        private static extern bool DeleteObject(IntPtr hObject);
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct RECT
-        {
-            public int Left;
-            public int Top;
-            public int Right;
-            public int Bottom;
-        }
-
         /// <summary>
-        /// Captures the entire screen
+        /// Captures the entire primary screen
         /// </summary>
-        public static Bitmap CaptureScreen()
+        public static SKBitmap CaptureScreen()
         {
-            return CaptureScreen(0, 0, Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height);
+            // 获取主屏幕尺寸
+            var screenDC = GetDC(IntPtr.Zero);
+            int screenWidth = GetDeviceCaps(screenDC, 8);  // HORZRES
+            int screenHeight = GetDeviceCaps(screenDC, 10); // VERTRES
+            ReleaseDC(IntPtr.Zero, screenDC);
+
+            return CaptureScreen(0, 0, screenWidth, screenHeight);
         }
+
+        [DllImport("gdi32.dll")]
+        private static extern int GetDeviceCaps(IntPtr hdc, int nIndex);
 
         /// <summary>
         /// Captures a specific region of the screen
         /// </summary>
-        public static Bitmap CaptureScreen(int x, int y, int width, int height)
+        public static SKBitmap CaptureScreen(int x, int y, int width, int height)
         {
-            Bitmap bitmap = new Bitmap(width, height, PixelFormat.Format32bppArgb);
-            using (Graphics graphics = Graphics.FromImage(bitmap))
-            {
-                graphics.CopyFromScreen(x, y, 0, 0, new Size(width, height), CopyPixelOperation.SourceCopy);
-            }
+            IntPtr screenDC = GetDC(IntPtr.Zero);
+            IntPtr memDC = CreateCompatibleDC(screenDC);
+            IntPtr hBitmap = CreateCompatibleBitmap(screenDC, width, height);
+            IntPtr oldBitmap = SelectObject(memDC, hBitmap);
+
+            BitBlt(memDC, 0, 0, width, height, screenDC, x, y, SRCCOPY);
+
+            SelectObject(memDC, oldBitmap);
+            DeleteDC(memDC);
+            ReleaseDC(IntPtr.Zero, screenDC);
+
+            // 转换为 SKBitmap
+            var bitmap = ConvertHBitmapToSKBitmap(hBitmap, width, height);
+            DeleteObject(hBitmap);
+
             return bitmap;
         }
 
         /// <summary>
-        /// Captures a specific window by handle (client area only, better for games)
-        /// Uses PrintWindow method which works reliably for DirectX games
+        /// Captures a window by its handle
         /// </summary>
-        public static Bitmap? CaptureWindow(IntPtr hWnd)
+        public static SKBitmap? CaptureWindow(IntPtr hWnd)
         {
             if (hWnd == IntPtr.Zero)
                 return null;
 
-            // Ensure DPI awareness for accurate dimensions
-            EnableDpiAwareness();
-
-            // Get window and client area dimensions
-            GetWindowRect(hWnd, out RECT windowRect);
-            GetClientRect(hWnd, out RECT clientRect);
-
-            int windowWidth = windowRect.Right - windowRect.Left;
-            int windowHeight = windowRect.Bottom - windowRect.Top;
-            int clientWidth = clientRect.Right - clientRect.Left;
-            int clientHeight = clientRect.Bottom - clientRect.Top;
-
-            if (clientWidth <= 0 || clientHeight <= 0)
+            if (!GetWindowRect(hWnd, out RECT rect))
                 return null;
 
-            // Calculate border sizes
-            int borderLeft = (windowWidth - clientWidth) / 2;
-            int borderTop = windowHeight - clientHeight - borderLeft;
+            int width = rect.Right - rect.Left;
+            int height = rect.Bottom - rect.Top;
 
-            // Capture the entire window using PrintWindow
-            IntPtr hdcSrc = GetWindowDC(hWnd);
-            IntPtr hdcDest = CreateCompatibleDC(hdcSrc);
-            IntPtr hBitmap = CreateCompatibleBitmap(hdcSrc, windowWidth, windowHeight);
-            IntPtr hOld = SelectObject(hdcDest, hBitmap);
-
-            // PrintWindow with PW_RENDERFULLCONTENT flag (0x00000002)
-            PrintWindow(hWnd, hdcDest, 0x00000002);
-
-            // Convert to Bitmap
-            Bitmap? fullBitmap = null;
-            Bitmap? clientBitmap = null;
-            
-            try
-            {
-                fullBitmap = Image.FromHbitmap(hBitmap);
-                
-                if (fullBitmap == null || fullBitmap.Width <= 0 || fullBitmap.Height <= 0)
-                {
-                    Console.WriteLine($"[ScreenCapture] 警告: fullBitmap 无效");
-                    return null;
-                }
-
-                // Extract client area from full window capture
-                clientBitmap = new Bitmap(clientWidth, clientHeight, PixelFormat.Format32bppArgb);
-                using (Graphics graphics = Graphics.FromImage(clientBitmap))
-                {
-                    graphics.DrawImage(fullBitmap,
-                        new Rectangle(0, 0, clientWidth, clientHeight),
-                        new Rectangle(borderLeft, borderTop, clientWidth, clientHeight),
-                        GraphicsUnit.Pixel);
-                }
-
-                return clientBitmap;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[ScreenCapture] 截图转换失败: {ex.Message}");
-                Console.WriteLine($"[ScreenCapture] 堆栈跟踪:\n{ex.StackTrace}");
-                clientBitmap?.Dispose();
+            if (width <= 0 || height <= 0)
                 return null;
-            }
-            finally
-            {
-                // Cleanup GDI objects
-                SelectObject(hdcDest, hOld);
-                DeleteObject(hBitmap);
-                DeleteDC(hdcDest);
-                ReleaseDC(hWnd, hdcSrc);
-                fullBitmap?.Dispose();
-            }
+
+            IntPtr windowDC = GetWindowDC(hWnd);
+            IntPtr memDC = CreateCompatibleDC(windowDC);
+            IntPtr hBitmap = CreateCompatibleBitmap(windowDC, width, height);
+            IntPtr oldBitmap = SelectObject(memDC, hBitmap);
+
+            PrintWindow(hWnd, memDC, 0);
+
+            SelectObject(memDC, oldBitmap);
+            DeleteDC(memDC);
+            ReleaseDC(hWnd, windowDC);
+
+            var bitmap = ConvertHBitmapToSKBitmap(hBitmap, width, height);
+            DeleteObject(hBitmap);
+
+            return bitmap;
         }
 
         /// <summary>
-        /// Captures a specific window by handle using screen capture method
-        /// Alternative method that may work better for some games
+        /// Captures the client area of a window
         /// </summary>
-        public static Bitmap? CaptureWindowFromScreen(IntPtr hWnd)
+        public static SKBitmap? CaptureWindowClient(IntPtr hWnd)
         {
             if (hWnd == IntPtr.Zero)
                 return null;
 
-            // Ensure DPI awareness for accurate dimensions
-            EnableDpiAwareness();
-
-            // Get client area size (game content without borders/titlebar)
-            GetClientRect(hWnd, out RECT clientRect);
+            if (!GetClientRect(hWnd, out RECT clientRect))
+                return null;
 
             int width = clientRect.Right - clientRect.Left;
             int height = clientRect.Bottom - clientRect.Top;
@@ -205,43 +174,97 @@ namespace MMP
             if (width <= 0 || height <= 0)
                 return null;
 
-            // Get client area screen coordinates
+            // 获取客户区在屏幕上的位置
             POINT point = new POINT { X = 0, Y = 0 };
             ClientToScreen(hWnd, ref point);
 
-            // Capture from screen (alternative method)
-            Bitmap bitmap = new Bitmap(width, height, PixelFormat.Format32bppArgb);
-            using (Graphics graphics = Graphics.FromImage(bitmap))
-            {
-                graphics.CopyFromScreen(point.X, point.Y, 0, 0, new Size(width, height), CopyPixelOperation.SourceCopy);
-            }
+            return CaptureScreen(point.X, point.Y, width, height);
+        }
+
+        /// <summary>
+        /// 将 Windows HBITMAP 转换为 SKBitmap
+        /// </summary>
+        private static SKBitmap ConvertHBitmapToSKBitmap(IntPtr hBitmap, int width, int height)
+        {
+            // 获取位图数据
+            BITMAP bm = new BITMAP();
+            GetObject(hBitmap, Marshal.SizeOf(bm), ref bm);
+
+            // 创建 SKBitmap
+            var info = new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
+            var bitmap = new SKBitmap(info);
+
+            // 获取位图数据
+            BITMAPINFO bmi = new BITMAPINFO();
+            bmi.bmiHeader.biSize = Marshal.SizeOf(typeof(BITMAPINFOHEADER));
+            bmi.bmiHeader.biWidth = width;
+            bmi.bmiHeader.biHeight = -height; // 负值表示从上到下
+            bmi.bmiHeader.biPlanes = 1;
+            bmi.bmiHeader.biBitCount = 32;
+            bmi.bmiHeader.biCompression = 0; // BI_RGB
+
+            IntPtr screenDC = GetDC(IntPtr.Zero);
+            
+            // 直接将数据复制到 SKBitmap
+            IntPtr pixels = bitmap.GetPixels();
+            GetDIBits(screenDC, hBitmap, 0, (uint)height, pixels, ref bmi, 0);
+            
+            ReleaseDC(IntPtr.Zero, screenDC);
 
             return bitmap;
         }
 
-        /// <summary>
-        /// Saves a bitmap to file
-        /// </summary>
-        public static void SaveToFile(Bitmap bitmap, string filePath)
+        [StructLayout(LayoutKind.Sequential)]
+        private struct BITMAP
         {
-            bitmap.Save(filePath, ImageFormat.Png);
+            public int bmType;
+            public int bmWidth;
+            public int bmHeight;
+            public int bmWidthBytes;
+            public ushort bmPlanes;
+            public ushort bmBitsPixel;
+            public IntPtr bmBits;
         }
-    }
 
-    // Helper class for screen information
-    public static class Screen
-    {
-        public static ScreenInfo PrimaryScreen => new ScreenInfo
+        [StructLayout(LayoutKind.Sequential)]
+        private struct BITMAPINFOHEADER
         {
-            Bounds = new Rectangle(0, 0, GetSystemMetrics(0), GetSystemMetrics(1))
-        };
+            public int biSize;
+            public int biWidth;
+            public int biHeight;
+            public ushort biPlanes;
+            public ushort biBitCount;
+            public int biCompression;
+            public int biSizeImage;
+            public int biXPelsPerMeter;
+            public int biYPelsPerMeter;
+            public int biClrUsed;
+            public int biClrImportant;
+        }
 
-        [DllImport("user32.dll")]
-        private static extern int GetSystemMetrics(int nIndex);
-    }
+        [StructLayout(LayoutKind.Sequential)]
+        private struct BITMAPINFO
+        {
+            public BITMAPINFOHEADER bmiHeader;
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 1)]
+            public uint[] bmiColors;
+        }
 
-    public class ScreenInfo
-    {
-        public Rectangle Bounds { get; set; }
+        [DllImport("gdi32.dll")]
+        private static extern int GetObject(IntPtr hObject, int nCount, ref BITMAP lpObject);
+
+        [DllImport("gdi32.dll")]
+        private static extern int GetDIBits(IntPtr hdc, IntPtr hbmp, uint uStartScan, uint cScanLines, IntPtr lpvBits, ref BITMAPINFO lpbi, uint uUsage);
+
+        /// <summary>
+        /// 保存 SKBitmap 到文件
+        /// </summary>
+        public static void SaveToFile(SKBitmap bitmap, string filePath)
+        {
+            using var image = SKImage.FromBitmap(bitmap);
+            using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+            using var stream = File.OpenWrite(filePath);
+            data.SaveTo(stream);
+        }
     }
 }

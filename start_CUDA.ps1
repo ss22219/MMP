@@ -442,7 +442,7 @@ Write-Host "编译成功" -ForegroundColor Green
 Write-Host ""
 
 # 显示可执行文件路径
-$exePath = Join-Path $PWD "bin\Release\net10.0-windows\MMP_CUDA.exe"
+$exePath = Join-Path $PWD "bin\Release\net10.0\MMP_CUDA.exe"
 if (Test-Path $exePath) {
     Write-Host "可执行文件位置:" -ForegroundColor Cyan
     Write-Host "  $exePath" -ForegroundColor White

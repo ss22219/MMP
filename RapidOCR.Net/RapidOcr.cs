@@ -2,9 +2,8 @@
 // Adapted from RapidAI / RapidOCR
 // https://github.com/RapidAI/RapidOCR/blob/92aec2c1234597fa9c3c270efd2600c83feecd8d/dotnet/RapidOcrOnnxCs/OcrLib/OcrLite.cs
 
-using System.Drawing;
-using System.IO;
 using System.Text;
+using SkiaSharp;
 
 namespace RapidOcrNet
 {
@@ -17,7 +16,7 @@ namespace RapidOcrNet
         /// <summary>
         /// Initialize using default models (english).
         /// </summary>
-        public void InitModels(int numThread = 0)
+        public void InitModels(int numThread = 0, bool useGpu = false)
         {
             const string modelsFolderName = "models";
 
@@ -27,14 +26,14 @@ namespace RapidOcrNet
 
             string keysPath = Path.Combine(modelsFolderName, "en_dict.txt");
 
-            InitModels(detPath, clsPath, recPath, keysPath, numThread);
+            InitModels(detPath, clsPath, recPath, keysPath, numThread, useGpu);
         }
 
-        public void InitModels(string detPath, string clsPath, string recPath, string keysPath, int numThread)
+        public void InitModels(string detPath, string clsPath, string recPath, string keysPath, int numThread, bool useGpu = false)
         {
-            _textDetector.InitModel(detPath, numThread);
-            _textClassifier.InitModel(clsPath, numThread);
-            _textRecognizer.InitModel(recPath, keysPath, numThread);
+            _textDetector.InitModel(detPath, numThread, useGpu);
+            _textClassifier.InitModel(clsPath, numThread, useGpu);
+            _textRecognizer.InitModel(recPath, keysPath, numThread, useGpu);
         }
 
         public OcrResult Detect(string img, RapidOcrOptions options)
@@ -44,25 +43,13 @@ namespace RapidOcrNet
                 throw new FileNotFoundException($"Could not find image to process: '{img}'.", img);
             }
 
-            using (var loadedBitmap = new Bitmap(img))
+            using (var originSrc = SKBitmap.Decode(img))
             {
-                // Ensure the bitmap is in the correct format (24bppRgb)
-                if (loadedBitmap.PixelFormat != System.Drawing.Imaging.PixelFormat.Format24bppRgb)
-                {
-                    using (var convertedBitmap = new Bitmap(loadedBitmap.Width, loadedBitmap.Height, System.Drawing.Imaging.PixelFormat.Format24bppRgb))
-                    {
-                        using (var g = Graphics.FromImage(convertedBitmap))
-                        {
-                            g.DrawImage(loadedBitmap, 0, 0);
-                        }
-                        return Detect(convertedBitmap, options);
-                    }
-                }
-                return Detect(loadedBitmap, options);
+                return Detect(originSrc, options);
             }
         }
 
-        public OcrResult Detect(Bitmap originSrc, RapidOcrOptions options)
+        public OcrResult Detect(SKBitmap originSrc, RapidOcrOptions options)
         {
             int originMaxSide = Math.Max(originSrc.Width, originSrc.Height);
 
@@ -77,15 +64,15 @@ namespace RapidOcrNet
             }
 
             resize += 2 * options.Padding;
-            var paddingRect = new RectI(options.Padding, options.Padding, originSrc.Width + options.Padding, originSrc.Height + options.Padding);
-            using (Bitmap paddingSrc = OcrUtils.MakePadding(originSrc, options.Padding))
+            var paddingRect = new SKRectI(options.Padding, options.Padding, originSrc.Width + options.Padding, originSrc.Height + options.Padding);
+            using (SKBitmap paddingSrc = OcrUtils.MakePadding(originSrc, options.Padding))
             {
                 return DetectOnce(paddingSrc, paddingRect, ScaleParam.GetScaleParam(paddingSrc, resize),
                     options.BoxScoreThresh, options.BoxThresh, options.UnClipRatio, options.DoAngle, options.MostAngle);
             }
         }
 
-        private OcrResult DetectOnce(Bitmap src, RectI originRect, ScaleParam scale, float boxScoreThresh,
+        private OcrResult DetectOnce(SKBitmap src, SKRectI originRect, ScaleParam scale, float boxScoreThresh,
             float boxThresh, float unClipRatio, bool doAngle, bool mostAngle)
         {
             // Start detect
@@ -103,7 +90,7 @@ namespace RapidOcrNet
 //#endif
 
             // getPartImages
-            Bitmap[] partImages = textBoxes != null ? OcrUtils.GetPartImages(src, textBoxes).ToArray() : Array.Empty<Bitmap>();
+            SKBitmap[] partImages = OcrUtils.GetPartImages(src, textBoxes).ToArray();
 
             // step: angleNet getAngles
             Angle[] angles = _textClassifier.GetAngles(partImages, doAngle, mostAngle);
@@ -113,9 +100,7 @@ namespace RapidOcrNet
             {
                 if (angles[i].Index == 1)
                 {
-                    var rotated = OcrUtils.BitmapRotateClockWise180(partImages[i]);
-                    partImages[i].Dispose();
-                    partImages[i] = rotated;
+                    partImages[i] = OcrUtils.BitmapRotateClockWise180(partImages[i]);
                 }
             }
 
@@ -130,30 +115,26 @@ namespace RapidOcrNet
             var textBlocks = new TextBlock[textLines.Length];
             for (int i = 0; i < textLines.Length; ++i)
             {
-                if (textBoxes == null || i >= textBoxes.Count) continue;
-                
                 var textBox = textBoxes[i];
                 var angle = angles[i];
                 var textLine = textLines[i];
 
-                var adjustedPoints = new PointI[textBox.Points.Length];
                 for (int p = 0; p < textBox.Points.Length; ++p)
                 {
-                    adjustedPoints[p] = new PointI(
-                        textBox.Points[p].X - originRect.Left,
-                        textBox.Points[p].Y - originRect.Top
-                    );
+                    ref SKPointI point = ref textBox.Points[p];
+                    point.X -= originRect.Left;
+                    point.Y -= originRect.Top;
                 }
 
                 textBlocks[i] = new TextBlock
                 {
-                    BoxPoints = adjustedPoints,
+                    BoxPoints = textBox.Points,
                     BoxScore = textBox.Score,
                     AngleIndex = angle.Index,
                     AngleScore = angle.Score,
                     AngleTime = angle.Time,
-                    Chars = textLine.Chars ?? Array.Empty<string>(),
-                    CharScores = textLine.CharScores ?? Array.Empty<float>(),
+                    Chars = textLine.Chars ?? [],
+                    CharScores = textLine.CharScores ?? [],
                     CrnnTime = textLine.Time,
                     BlockTime = angle.Time + textLine.Time
                 };

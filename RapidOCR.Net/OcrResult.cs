@@ -3,12 +3,13 @@
 // https://github.com/RapidAI/RapidOCR/blob/92aec2c1234597fa9c3c270efd2600c83feecd8d/dotnet/RapidOcrOnnxCs/OcrLib/OcrResult.cs
 
 using System.Text;
+using SkiaSharp;
 
 namespace RapidOcrNet
 {
     public sealed class TextBox
     {
-        public required PointI[] Points { get; init; }
+        public required SKPointI[] Points { get; init; }
         public float Score { get; init; }
 
         public override string ToString()
@@ -38,13 +39,13 @@ namespace RapidOcrNet
 
         public override string ToString()
         {
-            return $"TextLine[Text({string.Concat(Chars ?? Array.Empty<string>())}),CharScores({string.Join(",", CharScores ?? Array.Empty<float>())}),Time({Time}ms)]";
+            return $"TextLine[Text({string.Concat(Chars ?? [])}),CharScores({string.Join(",", CharScores ?? [])}),Time({Time}ms)]";
         }
     }
 
     public sealed class TextBlock
     {
-        public required PointI[] BoxPoints { get; init; }
+        public required SKPointI[] BoxPoints { get; init; }
         public float BoxScore { get; init; }
         public int AngleIndex { get; init; }
         public float AngleScore { get; init; }

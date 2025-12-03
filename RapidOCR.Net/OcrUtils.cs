@@ -1,121 +1,152 @@
 ﻿// Apache-2.0 license
 // Adapted from RapidAI / RapidOCR
+// https://github.com/RapidAI/RapidOCR/blob/92aec2c1234597fa9c3c270efd2600c83feecd8d/dotnet/RapidOcrOnnxCs/OcrLib/OcrUtils.cs
 
 using Microsoft.ML.OnnxRuntime.Tensors;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.Drawing.Drawing2D;
+using SkiaSharp;
 
 namespace RapidOcrNet
 {
     internal static class OcrUtils
     {
-        public static Tensor<float> SubtractMeanNormalize(Bitmap src, float[] meanVals, float[] normVals)
+        public static Tensor<float> SubtractMeanNormalize(SKBitmap src, float[] meanVals, float[] normVals)
         {
             int cols = src.Width;
             int rows = src.Height;
-            const int expChannels = 3; // RGB channels
+            int channels = src.BytesPerPixel;
+
+            const int expChannels = 3; // Size of meanVals, we ignore alpha channel
 
             Tensor<float> inputTensor = new DenseTensor<float>([1, expChannels, rows, cols]);
 
-            BitmapData bmpData = src.LockBits(new Rectangle(0, 0, cols, rows), 
-                ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
+            ReadOnlySpan<byte> span = src.GetPixelSpan();
 
-            try
+            if (src.Info.ColorType == SKColorType.Gray8)
             {
-                unsafe
+                for (int r = 0; r < rows; ++r)
                 {
-                    byte* ptr = (byte*)bmpData.Scan0;
-                    int stride = bmpData.Stride;
-
-                    for (int r = 0; r < rows; ++r)
+                    for (int c = 0; c < cols; ++c)
                     {
-                        byte* row = ptr + (r * stride);
-                        for (int c = 0; c < cols; ++c)
+                        int i = r * cols + c;
+                        byte value = span[i * channels];
+                        inputTensor[0, 0, r, c] = (value - meanVals[0]) * normVals[0];
+                        inputTensor[0, 1, r, c] = (value - meanVals[1]) * normVals[1];
+                        inputTensor[0, 2, r, c] = (value - meanVals[2]) * normVals[2];
+                    }
+                }
+            }
+            else if (src.Info.ColorType == SKColorType.Bgra8888)
+            {
+                for (int r = 0; r < rows; ++r)
+                {
+                    for (int c = 0; c < cols; ++c)
+                    {
+                        int i = r * cols + c;
+                        for (int ch = 0; ch < expChannels; ++ch)
                         {
-                            int offset = c * 3;
-                            // System.Drawing uses BGR format, model expects BGR order
-                            byte b = row[offset];
-                            byte g = row[offset + 1];
-                            byte r_val = row[offset + 2];
-
-                            // Keep BGR order as in original SkiaSharp code
-                            inputTensor[0, 0, r, c] = (b - meanVals[0]) * normVals[0];
-                            inputTensor[0, 1, r, c] = (g - meanVals[1]) * normVals[1];
-                            inputTensor[0, 2, r, c] = (r_val - meanVals[2]) * normVals[2];
+                            byte value = span[i * channels + ch];
+                            inputTensor[0, ch, r, c] = (value - meanVals[ch]) * normVals[ch];
                         }
                     }
                 }
             }
-            finally
+            else
             {
-                src.UnlockBits(bmpData);
+                throw new ArgumentException($"This image needs to be '{SKColorType.Bgra8888}' or '{SKColorType.Gray8}', but got '{src.Info.ColorType}'.");
             }
+
 
             return inputTensor;
         }
 
-        public static Bitmap MakePadding(Bitmap src, int padding)
+        public static SKBitmap MakePadding(SKBitmap src, int padding)
         {
             if (padding <= 0)
             {
                 return src;
             }
 
-            int newWidth = src.Width + 2 * padding;
-            int newHeight = src.Height + 2 * padding;
+            SKImageInfo info = src.Info;
 
-            Bitmap newBmp = new Bitmap(newWidth, newHeight, PixelFormat.Format24bppRgb);
-            using (Graphics g = Graphics.FromImage(newBmp))
+            info.Width += 2 * padding;
+            info.Height += 2 * padding;
+
+            SKBitmap newBmp = new SKBitmap(info);
+            using (var canvas = new SKCanvas(newBmp))
+            using (var paint = new SKPaint())
             {
-                g.Clear(Color.White);
-                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                g.DrawImage(src, padding, padding, src.Width, src.Height);
+                paint.IsAntialias = true;
+                paint.FilterQuality = SKFilterQuality.High;
+
+                canvas.Clear(SKColors.White);
+                canvas.DrawBitmap(src, new SKPoint(padding, padding), paint);
             }
 
             return newBmp;
         }
 
-        public static int GetThickness(Bitmap boxImg)
+        public static int GetThickness(SKBitmap boxImg)
         {
             int minSize = boxImg.Width > boxImg.Height ? boxImg.Height : boxImg.Width;
             return minSize / 1000 + 2;
         }
 
-        public static IEnumerable<Bitmap> GetPartImages(Bitmap src, IReadOnlyList<TextBox> textBoxes)
+        public static IEnumerable<SKBitmap> GetPartImages(SKBitmap src, IReadOnlyList<TextBox> textBoxes)
         {
             for (int i = 0; i < textBoxes.Count; ++i)
             {
-                if (textBoxes[i]?.Points != null && textBoxes[i].Points.Length == 4)
-                {
-                    yield return GetRotateCropImage(src, textBoxes[i].Points);
-                }
+                yield return GetRotateCropImage(src, textBoxes[i].Points);
             }
         }
 
-        public static Bitmap ResizeBitmap(Bitmap src, int width, int height)
+        public static SKMatrix GetPerspectiveTransform(SKPoint topLeft, SKPoint topRight, SKPoint botRight, SKPoint botLeft,
+            float width, float height)
         {
-            Bitmap resized = new Bitmap(width, height, PixelFormat.Format24bppRgb);
-            using (Graphics g = Graphics.FromImage(resized))
-            {
-                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                g.DrawImage(src, 0, 0, width, height);
-            }
-            return resized;
+            // https://stackoverflow.com/questions/48416118/perspective-transform-in-skia
+
+            float x1 = topLeft.X;
+            float y1 = topLeft.Y;
+            float x2 = topRight.X;
+            float y2 = topRight.Y;
+            float x3 = botRight.X;
+            float y3 = botRight.Y;
+            float x4 = botLeft.X;
+            float y4 = botLeft.Y;
+
+            float w = width;
+            float h = height;
+
+            float scaleX = (y1 * x2 * x4 - x1 * y2 * x4 + x1 * y3 * x4 - x2 * y3 * x4 - y1 * x2 * x3 + x1 * y2 * x3 - x1 * y4 * x3 + x2 * y4 * x3) / (x2 * y3 * w + y2 * x4 * w - y3 * x4 * w - x2 * y4 * w - y2 * w * x3 + y4 * w * x3);
+            float skewX = (-x1 * x2 * y3 - y1 * x2 * x4 + x2 * y3 * x4 + x1 * x2 * y4 + x1 * y2 * x3 + y1 * x4 * x3 - y2 * x4 * x3 - x1 * y4 * x3) / (x2 * y3 * h + y2 * x4 * h - y3 * x4 * h - x2 * y4 * h - y2 * h * x3 + y4 * h * x3);
+            float transX = x1;
+            float skewY = (-y1 * x2 * y3 + x1 * y2 * y3 + y1 * y3 * x4 - y2 * y3 * x4 + y1 * x2 * y4 - x1 * y2 * y4 - y1 * y4 * x3 + y2 * y4 * x3) / (x2 * y3 * w + y2 * x4 * w - y3 * x4 * w - x2 * y4 * w - y2 * w * x3 + y4 * w * x3);
+            float scaleY = (-y1 * x2 * y3 - y1 * y2 * x4 + y1 * y3 * x4 + x1 * y2 * y4 - x1 * y3 * y4 + x2 * y3 * y4 + y1 * y2 * x3 - y2 * y4 * x3) / (x2 * y3 * h + y2 * x4 * h - y3 * x4 * h - x2 * y4 * h - y2 * h * x3 + y4 * h * x3);
+            float transY = y1;
+            float persp0 = (x1 * y3 - x2 * y3 + y1 * x4 - y2 * x4 - x1 * y4 + x2 * y4 - y1 * x3 + y2 * x3) / (x2 * y3 * w + y2 * x4 * w - y3 * x4 * w - x2 * y4 * w - y2 * w * x3 + y4 * w * x3);
+            float persp1 = (-y1 * x2 + x1 * y2 - x1 * y3 - y2 * x4 + y3 * x4 + x2 * y4 + y1 * x3 - y4 * x3) / (x2 * y3 * h + y2 * x4 * h - y3 * x4 * h - x2 * y4 * h - y2 * h * x3 + y4 * h * x3);
+            float persp2 = 1;
+
+            var persp = new SKMatrix(scaleX, skewX, transX, skewY, scaleY, transY, persp0, persp1, persp2);
+            return persp.TryInvert(out SKMatrix perspInv) ? perspInv : SKMatrix.Identity; // TODO - Check what's best to return when not inv
         }
 
-        public static Bitmap GetRotateCropImage(Bitmap src, PointI[] box)
+        public static SKBitmap GetRotateCropImage(SKBitmap src, SKPointI[] box)
         {
             System.Diagnostics.Debug.Assert(box.Length == 4);
-            Span<PointI> points = stackalloc PointI[] { box[0], box[1], box[2], box[3] };
-            
+            Span<SKPointI> points = stackalloc SKPointI[] { box[0], box[1], box[2], box[3] }; // Clone points
             ReadOnlySpan<int> collectX = stackalloc int[] { box[0].X, box[1].X, box[2].X, box[3].X };
             int left = int.MaxValue;
             int right = int.MinValue;
             foreach (var v in collectX)
             {
-                if (v < left) left = v;
-                else if (v > right) right = v;
+                if (v < left)
+                {
+                    left = v;
+                }
+                else if (v > right)
+                {
+                    right = v;
+                }
             }
 
             ReadOnlySpan<int> collectY = stackalloc int[] { box[0].Y, box[1].Y, box[2].Y, box[3].Y };
@@ -123,55 +154,86 @@ namespace RapidOcrNet
             int bottom = int.MinValue;
             foreach (var v in collectY)
             {
-                if (v < top) top = v;
-                else if (v > bottom) bottom = v;
+                if (v < top)
+                {
+                    top = v;
+                }
+                else if (v > bottom)
+                {
+                    bottom = v;
+                }
             }
 
-            Rectangle rect = new Rectangle(left, top, right - left, bottom - top);
-            Bitmap imgCrop = src.Clone(rect, src.PixelFormat);
+            SKRectI rect = new SKRectI(left, top, right, bottom);
 
-            ref PointI p0 = ref points[0];
+            var info = src.Info;
+            info.Width = rect.Width;
+            info.Height = rect.Height;
+
+            SKBitmap imgCrop = new SKBitmap(info);
+            if (!src.ExtractSubset(imgCrop, rect))
+            {
+                throw new Exception("Could not extract image subset.");
+            }
+
+            ref SKPointI p0 = ref points[0];
             p0.X -= left;
             p0.Y -= top;
 
-            ref PointI p1 = ref points[1];
+            ref SKPointI p1 = ref points[1];
             p1.X -= left;
             p1.Y -= top;
 
-            ref PointI p2 = ref points[2];
+            ref SKPointI p2 = ref points[2];
             p2.X -= left;
             p2.Y -= top;
 
-            ref PointI p3 = ref points[3];
+            ref SKPointI p3 = ref points[3];
             p3.X -= left;
             p3.Y -= top;
 
             int imgCropWidth = (int)Math.Sqrt((p0.X - p1.X) * (p0.X - p1.X) + (p0.Y - p1.Y) * (p0.Y - p1.Y));
             int imgCropHeight = (int)Math.Sqrt((p0.X - p3.X) * (p0.X - p3.X) + (p0.Y - p3.Y) * (p0.Y - p3.Y));
 
-            var srcPoints = new PointF[] 
-            { 
-                new PointF(p0.X, p0.Y), 
-                new PointF(p1.X, p1.Y), 
-                new PointF(p2.X, p2.Y) 
-            };
-            
-            var dstPoints = new PointF[] 
-            { 
-                new PointF(0, 0), 
-                new PointF(imgCropWidth, 0), 
-                new PointF(imgCropWidth, imgCropHeight) 
-            };
+            var ptsSrc0Sk = new SKPoint(p0.X, p0.Y);
+            var ptsSrc1Sk = new SKPoint(p1.X, p1.Y);
+            var ptsSrc2Sk = new SKPoint(p2.X, p2.Y);
+            var ptsSrc3Sk = new SKPoint(p3.X, p3.Y);
 
-            Bitmap partImg = new Bitmap(imgCropWidth, imgCropHeight, PixelFormat.Format24bppRgb);
-            using (Graphics g = Graphics.FromImage(partImg))
+            var m = GetPerspectiveTransform(ptsSrc0Sk, ptsSrc1Sk, ptsSrc2Sk, ptsSrc3Sk, imgCropWidth, imgCropHeight);
+
+            if (m.IsIdentity)
             {
-                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                g.Transform = GetPerspectiveTransform(srcPoints, dstPoints, imgCropWidth, imgCropHeight);
-                g.DrawImage(imgCrop, 0, 0);
+                if (imgCrop.Height >= imgCrop.Width * 1.5)
+                {
+                    return BitmapRotateClockWise90(imgCrop);
+                }
+
+                return imgCrop;
             }
 
-            imgCrop.Dispose();
+            var info2 = imgCrop.Info;
+            info2.Width = imgCropWidth;
+            info2.Height = imgCropHeight;
+
+            var partImg = new SKBitmap(info2);
+            using (var canvas = new SKCanvas(partImg))
+            using (var paint = new SKPaint())
+            {
+                paint.IsAntialias = true;
+                paint.FilterQuality = SKFilterQuality.High;
+
+                canvas.SetMatrix(m);
+                canvas.DrawBitmap(imgCrop, 0, 0, paint);
+                canvas.Restore();
+            }
+
+            //#if DEBUG
+            //            using (var fs = new FileStream($"perspective_{Guid.NewGuid()}.png", FileMode.Create))
+            //            {
+            //                partImg.Encode(fs, SKEncodedImageFormat.Png, 100);
+            //            }
+            //#endif
 
             if (partImg.Height >= partImg.Width * 1.5)
             {
@@ -181,62 +243,49 @@ namespace RapidOcrNet
             return partImg;
         }
 
-        private static Matrix GetPerspectiveTransform(PointF[] srcPoints, PointF[] dstPoints, int width, int height)
+        public static SKBitmap BitmapRotateClockWise180(SKBitmap src)
         {
-            // Simplified affine transform for 3 points
-            var matrix = new Matrix();
-            
-            // Calculate affine transformation matrix
-            float x1 = srcPoints[0].X, y1 = srcPoints[0].Y;
-            float x2 = srcPoints[1].X, y2 = srcPoints[1].Y;
-            float x3 = srcPoints[2].X, y3 = srcPoints[2].Y;
-            
-            float u1 = dstPoints[0].X, v1 = dstPoints[0].Y;
-            float u2 = dstPoints[1].X, v2 = dstPoints[1].Y;
-            float u3 = dstPoints[2].X, v3 = dstPoints[2].Y;
-            
-            float denom = (x1 - x2) * (y1 - y3) - (x1 - x3) * (y1 - y2);
-            
-            if (Math.Abs(denom) < 0.0001f)
-            {
-                return matrix; // Return identity if degenerate
-            }
-            
-            float a = ((u1 - u2) * (y1 - y3) - (u1 - u3) * (y1 - y2)) / denom;
-            float b = ((u1 - u2) * (x1 - x3) - (u1 - u3) * (x1 - x2)) / -denom;
-            float c = u1 - a * x1 - b * y1;
-            
-            float d = ((v1 - v2) * (y1 - y3) - (v1 - v3) * (y1 - y2)) / denom;
-            float e = ((v1 - v2) * (x1 - x3) - (v1 - v3) * (x1 - x2)) / -denom;
-            float f = v1 - d * x1 - e * y1;
-            
-            matrix = new Matrix(a, d, b, e, c, f);
-            return matrix;
-        }
+            var rotated = new SKBitmap(src.Info);
 
-        public static Bitmap BitmapRotateClockWise180(Bitmap src)
-        {
-            Bitmap rotated = new Bitmap(src.Width, src.Height, src.PixelFormat);
-            using (Graphics g = Graphics.FromImage(rotated))
+            using (var canvas = new SKCanvas(rotated))
+            using (var paint = new SKPaint())
             {
-                g.TranslateTransform(src.Width / 2f, src.Height / 2f);
-                g.RotateTransform(180);
-                g.TranslateTransform(-src.Width / 2f, -src.Height / 2f);
-                g.DrawImage(src, new Point(0, 0));
+                paint.IsAntialias = true;
+                paint.FilterQuality = SKFilterQuality.High;
+
+                canvas.Translate(rotated.Width, rotated.Height);
+                canvas.RotateDegrees(180);
+                canvas.DrawBitmap(src, 0, 0, paint);
+                canvas.Restore();
             }
+
             return rotated;
         }
 
-        public static Bitmap BitmapRotateClockWise90(Bitmap src)
+        public static SKBitmap BitmapRotateClockWise90(SKBitmap src)
         {
-            Bitmap rotated = new Bitmap(src.Height, src.Width, src.PixelFormat);
-            using (Graphics g = Graphics.FromImage(rotated))
+            var info = src.Info;
+            (info.Width, info.Height) = (info.Height, info.Width);
+
+            var rotated = new SKBitmap(info);
+
+            using (var canvas = new SKCanvas(rotated))
+            using (var paint = new SKPaint())
             {
-                g.TranslateTransform(rotated.Width / 2f, rotated.Height / 2f);
-                g.RotateTransform(90);
-                g.TranslateTransform(-src.Width / 2f, -src.Height / 2f);
-                g.DrawImage(src, new Point(0, 0));
+                paint.IsAntialias = true;
+                paint.FilterQuality = SKFilterQuality.High;
+
+                canvas.Translate(rotated.Width, 0);
+                canvas.RotateDegrees(90);
+                canvas.DrawBitmap(src, 0, 0, paint);
+                canvas.Restore();
             }
+            /*
+            using (var fs = new FileStream("rotated.png", FileMode.Create))
+            {
+                rotated.Encode(fs, SKEncodedImageFormat.Png, 100);
+            }
+            */
             return rotated;
         }
     }

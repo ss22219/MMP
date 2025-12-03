@@ -2,10 +2,9 @@
 // Adapted from RapidAI / RapidOCR
 // https://github.com/RapidAI/RapidOCR/blob/92aec2c1234597fa9c3c270efd2600c83feecd8d/dotnet/RapidOcrOnnxCs/OcrLib/AngleNet.cs
 
-using System.Drawing;
-using System.IO;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
+using SkiaSharp;
 
 namespace RapidOcrNet
 {
@@ -18,10 +17,10 @@ namespace RapidOcrNet
         private readonly float[] _meanValues = [127.5F, 127.5F, 127.5F];
         private readonly float[] _normValues = [1.0F / 127.5F, 1.0F / 127.5F, 1.0F / 127.5F];
 
-        private InferenceSession _angleNet = null!;
-        private string _inputName = null!;
+        private InferenceSession? _angleNet;
+        private string? _inputName;
 
-        public void InitModel(string path, int numThread)
+        public void InitModel(string path, int numThread, bool useGpu = false)
         {
             if (!File.Exists(path))
             {
@@ -32,26 +31,28 @@ namespace RapidOcrNet
             {
                 GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_EXTENDED,
                 InterOpNumThreads = numThread,
-                IntraOpNumThreads = numThread,
-                LogSeverityLevel = OrtLoggingLevel.ORT_LOGGING_LEVEL_ERROR // Suppress warnings
+                IntraOpNumThreads = numThread
             };
 
-            // Try to use DirectML GPU acceleration
-            try
+            // 如果启用 GPU，添加 DirectML 执行提供程序
+            if (useGpu)
             {
-                op.AppendExecutionProvider_DML(0);
-                System.Diagnostics.Debug.WriteLine("TextClassifier: Using DirectML GPU");
-            }
-            catch
-            {
-                System.Diagnostics.Debug.WriteLine("TextClassifier: DirectML not available, using CPU");
+                try
+                {
+                    op.AppendExecutionProvider_DML(0);
+                    Console.WriteLine("[TextClassifier] 使用 DirectML (GPU) 加速");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[TextClassifier] DirectML 初始化失败，回退到 CPU: {ex.Message}");
+                }
             }
 
             _angleNet = new InferenceSession(path, op);
             _inputName = _angleNet.InputMetadata.Keys.First();
         }
 
-        public Angle[] GetAngles(Bitmap[] partImgs, bool doAngle, bool mostAngle)
+        public Angle[] GetAngles(SKBitmap[] partImgs, bool doAngle, bool mostAngle)
         {
             var angles = new Angle[partImgs.Length];
             if (doAngle)
@@ -90,11 +91,11 @@ namespace RapidOcrNet
             return angles;
         }
 
-        public Angle GetAngle(Bitmap src)
+        public Angle GetAngle(SKBitmap src)
         {
             var sw = System.Diagnostics.Stopwatch.StartNew();
             Tensor<float> inputTensors;
-            using (var angleImg = OcrUtils.ResizeBitmap(src, AngleDstWidth, AngleDstHeight))
+            using (var angleImg = src.Resize(new SKSizeI(AngleDstWidth, AngleDstHeight), SKFilterQuality.High))
             {
                 inputTensors = OcrUtils.SubtractMeanNormalize(angleImg, _meanValues, _normValues);
             }

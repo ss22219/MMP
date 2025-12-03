@@ -3,11 +3,10 @@
 // https://github.com/RapidAI/RapidOCR/blob/92aec2c1234597fa9c3c270efd2600c83feecd8d/dotnet/RapidOcrOnnxCs/OcrLib/CrnnNet.cs
 
 using System.Diagnostics;
-using System.Drawing;
-using System.IO;
 using System.Text;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
+using SkiaSharp;
 
 namespace RapidOcrNet
 {
@@ -18,11 +17,11 @@ namespace RapidOcrNet
         private const int CrnnDstHeight = 48;
         //private const int CrnnCols = 6625;
 
-        private InferenceSession _crnnNet = null!;
-        private string[] _keys = null!;
-        private string _inputName = null!;
+        private InferenceSession? _crnnNet;
+        private string[]? _keys;
+        private string? _inputName;
 
-        public void InitModel(string path, string keysPath, int numThread)
+        public void InitModel(string path, string keysPath, int numThread, bool useGpu = false)
         {
             if (!File.Exists(path))
             {
@@ -38,19 +37,21 @@ namespace RapidOcrNet
             {
                 GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_EXTENDED,
                 InterOpNumThreads = numThread,
-                IntraOpNumThreads = numThread,
-                LogSeverityLevel = OrtLoggingLevel.ORT_LOGGING_LEVEL_ERROR // Suppress warnings
+                IntraOpNumThreads = numThread
             };
 
-            // Try to use DirectML GPU acceleration
-            try
+            // 如果启用 GPU，添加 DirectML 执行提供程序
+            if (useGpu)
             {
-                op.AppendExecutionProvider_DML(0);
-                System.Diagnostics.Debug.WriteLine("TextRecognizer: Using DirectML GPU");
-            }
-            catch
-            {
-                System.Diagnostics.Debug.WriteLine("TextRecognizer: DirectML not available, using CPU");
+                try
+                {
+                    op.AppendExecutionProvider_DML(0);
+                    Console.WriteLine("[TextRecognizer] 使用 DirectML (GPU) 加速");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[TextRecognizer] DirectML 初始化失败，回退到 CPU: {ex.Message}");
+                }
             }
 
             _crnnNet = new InferenceSession(path, op);
@@ -76,7 +77,7 @@ namespace RapidOcrNet
             }
         }
 
-        public TextLine[] GetTextLines(Bitmap[] partImgs)
+        public TextLine[] GetTextLines(SKBitmap[] partImgs)
         {
             var textLines = new TextLine[partImgs.Length];
             for (int i = 0; i < partImgs.Length; i++)
@@ -87,14 +88,14 @@ namespace RapidOcrNet
             return textLines;
         }
 
-        public TextLine GetTextLine(Bitmap src)
+        public TextLine GetTextLine(SKBitmap src)
         {
             var sw = Stopwatch.StartNew();
             float scale = CrnnDstHeight / (float)src.Height;
             int dstWidth = (int)(src.Width * scale);
 
             Tensor<float> inputTensors;
-            using (Bitmap srcResize = OcrUtils.ResizeBitmap(src, dstWidth, CrnnDstHeight))
+            using (SKBitmap srcResize = src.Resize(new SKSizeI(dstWidth, CrnnDstHeight), SKFilterQuality.High))
             {
                 inputTensors = OcrUtils.SubtractMeanNormalize(srcResize, MeanValues, NormValues);
             }

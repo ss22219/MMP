@@ -2,7 +2,7 @@
 // Adapted from RapidAI / RapidOCR
 // https://github.com/RapidAI/RapidOCR/blob/92aec2c1234597fa9c3c270efd2600c83feecd8d/dotnet/RapidOcrOnnxCs/OcrLib/ScaleParam.cs
 
-using System.Drawing;
+using SkiaSharp;
 
 namespace RapidOcrNet
 {
@@ -35,7 +35,7 @@ namespace RapidOcrNet
             return $"sw:{SrcWidth},sh:{SrcHeight},dw:{DstWidth},dh:{DstHeight},{ScaleWidth},{ScaleHeight}";
         }
 
-        public static ScaleParam GetScaleParam(Bitmap src, int dstSize)
+        public static ScaleParam GetScaleParam(SKBitmap src, int dstSize)
         {
             int srcWidth = src.Width;
             int dstWidth = src.Width;

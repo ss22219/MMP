@@ -523,7 +523,7 @@ namespace MMP.States
             // 检查高度差
             if ((DateTime.Now - lastJumpTime).TotalMilliseconds > 1000)
             {
-                var playerLoc = BattleApi.GetPlayerLocation();
+                var playerLoc = BattleApi!.GetPlayerLocation();
                 float heightDiff = targetPos.Z - playerLoc.Z;
                 if (heightDiff > 50)
                 {
@@ -539,7 +539,7 @@ namespace MMP.States
 
         private float GetPlayerTargetDistance(FVector targetPos)
         {
-            var playerLoc = BattleApi.GetPlayerLocation();
+            var playerLoc = BattleApi!.GetPlayerLocation();
             return CalculateDistance(playerLoc, targetPos);
         }
 
