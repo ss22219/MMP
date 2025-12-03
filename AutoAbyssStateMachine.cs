@@ -1,7 +1,4 @@
-using System;
 using System.Collections.Concurrent;
-using System.Threading;
-using System.Threading.Tasks;
 using MMP.States;
 
 namespace MMP
@@ -42,6 +39,9 @@ namespace MMP
         // OCR 完成事件（只定义一次）
         private event Action<OcrEngine.OcrResult>? OnOcrCompleted;
         
+        // 防AFK线程相关
+        private Thread? _antiAfkThread;
+        
         // 组件
         private IntPtr _hwnd;
         private OcrEngine? _ocrEngine;
@@ -74,6 +74,7 @@ namespace MMP
 
             StartOcrThread();
             StartExitMonitorThread();
+            StartAntiAfkThread();
             
             // 如果当前有同步上下文（WPF Dispatcher），直接使用它
             var currentContext = SynchronizationContext.Current;
@@ -112,6 +113,7 @@ namespace MMP
 
             StartOcrThread();
             StartExitMonitorThread();
+            StartAntiAfkThread();
             
             // 在后台线程运行主循环，避免阻塞 UI
             await Task.Run(async () =>
@@ -256,6 +258,7 @@ namespace MMP
                         // 记录本次 OCR 开始时间
                         lastOcrTime = DateTime.Now;
 
+                        // 使用 CaptureWindow 捕获游戏画面（已自动裁剪客户区）
                         using var screenshot = ScreenCapture.CaptureWindow(_hwnd);
                         if (screenshot != null && _ocrEngine != null)
                         {
@@ -302,6 +305,112 @@ namespace MMP
         }
 
         /// <summary>
+        /// 启动防AFK线程（使用 Windows API 检测和移动鼠标）
+        /// </summary>
+        private void StartAntiAfkThread()
+        {
+            _antiAfkThread = new Thread(() =>
+            {
+                Console.WriteLine("[防AFK线程] 启动");
+                var random = new Random();
+                
+                // 获取初始鼠标位置
+                POINT lastPos = new POINT();
+                GetCursorPos(out lastPos);
+                int idleSeconds = 0;
+                int moveCount = 0;
+                
+                while (!_shouldStop)
+                {
+                    try
+                    {
+                        // 获取当前鼠标位置
+                        POINT currentPos = new POINT();
+                        GetCursorPos(out currentPos);
+                        
+                        // 检查鼠标是否移动
+                        if (currentPos.X == lastPos.X && currentPos.Y == lastPos.Y)
+                        {
+                            // 没动，计数+1
+                            idleSeconds++;
+                            
+                            // 5秒没动就自动移动
+                            if (idleSeconds >= 5)
+                            {
+                                // 随机移动 -2 到 2 像素
+                                int deltaX = random.Next(-2, 3);
+                                int deltaY = random.Next(-2, 3);
+                                
+                                // 确保至少移动1像素
+                                if (deltaX == 0 && deltaY == 0)
+                                    deltaX = random.Next(0, 2) == 0 ? -1 : 1;
+                                
+                                int newX = currentPos.X + deltaX;
+                                int newY = currentPos.Y + deltaY;
+                                
+                                // 限制在屏幕范围内
+                                newX = Math.Max(0, Math.Min(GetSystemMetrics(0) - 1, newX));
+                                newY = Math.Max(0, Math.Min(GetSystemMetrics(1) - 1, newY));
+                                
+                                // 移动鼠标
+                                SetCursorPos(newX, newY);
+                                moveCount++;
+                                
+                                // 验证移动
+                                Thread.Sleep(50);
+                                POINT verifyPos = new POINT();
+                                GetCursorPos(out verifyPos);
+                                
+                                // 重置计数
+                                idleSeconds = 0;
+                                lastPos = verifyPos;
+                            }
+                        }
+                        else
+                        {
+                            // 鼠标移动了，重置计数
+                            idleSeconds = 0;
+                            lastPos = currentPos;
+                        }
+                        
+                        // 每秒检查一次
+                        Thread.Sleep(1000);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[防AFK线程] 错误: {ex.Message}");
+                        Thread.Sleep(1000);
+                    }
+                }
+                
+                Console.WriteLine($"[防AFK线程] 停止 - 总移动次数: {moveCount}");
+            })
+            {
+                IsBackground = true,
+                Name = "Anti-AFK Thread"
+            };
+            
+            _antiAfkThread.Start();
+        }
+        
+        // Windows API for mouse position
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool GetCursorPos(out POINT lpPoint);
+        
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool SetCursorPos(int x, int y);
+        
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern int GetSystemMetrics(int nIndex);
+        
+        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+        private struct POINT
+        {
+            public int X;
+            public int Y;
+        }
+
+        /// <summary>
         /// 获取最新的 OCR 结果（线程安全）
         /// </summary>
         private OcrEngine.OcrResult? GetLatestOcrResult()
@@ -324,7 +433,10 @@ namespace MMP
             {
                 try
                 {
-                    _controller!.Activate();
+                    // 激活窗口（仅在前台模式需要）
+                    if (_controller != null && !_controller.BackgroundMode)
+                        _controller.Activate();
+                    
                     // 检查状态超时（ForceExiting 状态不检查超时）
                     if (CurrentState != GameState.ForceExiting && 
                         (DateTime.Now - _stateStartTime).TotalSeconds > _config.Timeouts.StateTimeout)
@@ -374,16 +486,11 @@ namespace MMP
                     {
                         // 状态被中断，调用清理
                         if (currentHandler != null && _stateContext != null)
-                        {
-                            Console.WriteLine($"  [状态中断] 清理 {CurrentState}");
                             currentHandler.Cleanup(_stateContext);
-                        }
                         
                         // 转换到新状态
                         if (_nextState != null)
-                        {
                             TransitionTo(_nextState.Value);
-                        }
                     }
                     finally
                     {

@@ -124,37 +124,78 @@ namespace MMP
         }
 
         /// <summary>
-        /// Captures a window by its handle
+        /// Captures a window by its handle (client area only, better for games)
+        /// Uses PrintWindow method which works reliably for DirectX games
         /// </summary>
         public static SKBitmap? CaptureWindow(IntPtr hWnd)
         {
             if (hWnd == IntPtr.Zero)
                 return null;
 
-            if (!GetWindowRect(hWnd, out RECT rect))
+            // Ensure DPI awareness for accurate dimensions
+            EnableDpiAwareness();
+
+            // Get window and client area dimensions
+            if (!GetWindowRect(hWnd, out RECT windowRect))
+                return null;
+            
+            if (!GetClientRect(hWnd, out RECT clientRect))
                 return null;
 
-            int width = rect.Right - rect.Left;
-            int height = rect.Bottom - rect.Top;
+            int windowWidth = windowRect.Right - windowRect.Left;
+            int windowHeight = windowRect.Bottom - windowRect.Top;
+            int clientWidth = clientRect.Right - clientRect.Left;
+            int clientHeight = clientRect.Bottom - clientRect.Top;
 
-            if (width <= 0 || height <= 0)
+            if (clientWidth <= 0 || clientHeight <= 0)
                 return null;
 
+            // Calculate border sizes
+            int borderLeft = (windowWidth - clientWidth) / 2;
+            int borderTop = windowHeight - clientHeight - borderLeft;
+
+            // Capture the entire window using PrintWindow
             IntPtr windowDC = GetWindowDC(hWnd);
             IntPtr memDC = CreateCompatibleDC(windowDC);
-            IntPtr hBitmap = CreateCompatibleBitmap(windowDC, width, height);
+            IntPtr hBitmap = CreateCompatibleBitmap(windowDC, windowWidth, windowHeight);
             IntPtr oldBitmap = SelectObject(memDC, hBitmap);
 
-            PrintWindow(hWnd, memDC, 0);
+            // PrintWindow with PW_RENDERFULLCONTENT flag (0x00000002)
+            PrintWindow(hWnd, memDC, 0x00000002);
 
             SelectObject(memDC, oldBitmap);
             DeleteDC(memDC);
             ReleaseDC(hWnd, windowDC);
 
-            var bitmap = ConvertHBitmapToSKBitmap(hBitmap, width, height);
+            // Convert full window to SKBitmap
+            var fullBitmap = ConvertHBitmapToSKBitmap(hBitmap, windowWidth, windowHeight);
             DeleteObject(hBitmap);
 
-            return bitmap;
+            if (fullBitmap == null)
+                return null;
+
+            // Extract client area from full window capture
+            try
+            {
+                var clientBitmap = new SKBitmap(clientWidth, clientHeight);
+                using (var canvas = new SKCanvas(clientBitmap))
+                using (var paint = new SKPaint())
+                {
+                    paint.IsAntialias = false;
+
+                    var srcRect = new SKRect(borderLeft, borderTop, borderLeft + clientWidth, borderTop + clientHeight);
+                    var dstRect = new SKRect(0, 0, clientWidth, clientHeight);
+                    canvas.DrawBitmap(fullBitmap, srcRect, dstRect, paint);
+                }
+
+                fullBitmap.Dispose();
+                return clientBitmap;
+            }
+            catch
+            {
+                fullBitmap?.Dispose();
+                return null;
+            }
         }
 
         /// <summary>
@@ -266,5 +307,6 @@ namespace MMP
             using var stream = File.OpenWrite(filePath);
             data.SaveTo(stream);
         }
+
     }
 }

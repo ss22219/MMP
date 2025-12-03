@@ -75,6 +75,10 @@ namespace RapidOcrNet
         private OcrResult DetectOnce(SKBitmap src, SKRectI originRect, ScaleParam scale, float boxScoreThresh,
             float boxThresh, float unClipRatio, bool doAngle, bool mostAngle)
         {
+            // 空值检查
+            if (src == null)
+                return new OcrResult { TextBlocks = [], StrRes = "" };
+
             // Start detect
             var sw = System.Diagnostics.Stopwatch.StartNew();
 
@@ -82,15 +86,24 @@ namespace RapidOcrNet
             var textBoxes = _textDetector.GetTextBoxes(src, scale, boxScoreThresh, boxThresh, unClipRatio);
             var dbNetTime = sw.ElapsedMilliseconds;
 
-//#if DEBUG
-//            foreach (var x in  textBoxes)
-//            {
-//                System.Diagnostics.Debug.WriteLine(x);
-//            }
-//#endif
+            // 检查 textBoxes 是否为空
+            if (textBoxes == null || textBoxes.Count == 0)
+                return new OcrResult { TextBlocks = [], StrRes = "" };
 
             // getPartImages
-            SKBitmap[] partImages = OcrUtils.GetPartImages(src, textBoxes).ToArray();
+            SKBitmap[] partImages;
+            try
+            {
+                partImages = OcrUtils.GetPartImages(src, textBoxes).ToArray();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[RapidOcr] Error extracting part images: {ex.Message}");
+                return new OcrResult { TextBlocks = [], StrRes = "" };
+            }
+
+            if (partImages.Length == 0)
+                return new OcrResult { TextBlocks = [], StrRes = "" };
 
             // step: angleNet getAngles
             Angle[] angles = _textClassifier.GetAngles(partImages, doAngle, mostAngle);

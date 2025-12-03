@@ -120,6 +120,7 @@ namespace MMP.States
             while (DateTime.Now < endTime && !ct.IsCancellationRequested)
             {
                 var ocrResult = _getLatestOcrResult();
+                
                 if (ocrResult != null && ocrResult.Regions != null)
                 {
                     // 遍历所有候选文本
@@ -128,8 +129,8 @@ namespace MMP.States
                         var button = ocrResult.Regions.FirstOrDefault(r => r.Text.Contains(buttonText));
                         if (button != null && Controller != null)
                         {
-                            Console.WriteLine($"  [等待点击] 找到 {buttonText}，点击");
                             Controller.Click((int)button.Center.X, (int)button.Center.Y);
+                            await Task.Delay(500, ct);
                             return true;
                         }
                     }
@@ -138,7 +139,6 @@ namespace MMP.States
                 await Task.Delay(200, ct);
             }
 
-            Console.WriteLine($"  [等待点击] 超时，未找到 [{string.Join(", ", buttonTexts)}]");
             return false;
         }
 

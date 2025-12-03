@@ -93,10 +93,32 @@ namespace RapidOcrNet
 
         public static IEnumerable<SKBitmap> GetPartImages(SKBitmap src, IReadOnlyList<TextBox> textBoxes)
         {
+            if (src == null)
+                throw new ArgumentNullException(nameof(src), "Source bitmap cannot be null");
+
+            if (textBoxes == null)
+                throw new ArgumentNullException(nameof(textBoxes), "TextBoxes list cannot be null");
+
+            var result = new List<SKBitmap>();
+            
             for (int i = 0; i < textBoxes.Count; ++i)
             {
-                yield return GetRotateCropImage(src, textBoxes[i].Points);
+                if (textBoxes[i] == null || textBoxes[i].Points == null || textBoxes[i].Points.Length == 0)
+                    continue;
+
+                try
+                {
+                    var croppedImage = GetRotateCropImage(src, textBoxes[i].Points);
+                    if (croppedImage != null)
+                        result.Add(croppedImage);
+                }
+                catch
+                {
+                    // 继续处理下一个
+                }
             }
+            
+            return result;
         }
 
         public static SKMatrix GetPerspectiveTransform(SKPoint topLeft, SKPoint topRight, SKPoint botRight, SKPoint botLeft,

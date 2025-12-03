@@ -4,6 +4,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using OpenCvSharp;
+using SkiaSharp;
 using Sdcb.PaddleInference;
 using Sdcb.PaddleOCR;
 using Sdcb.PaddleOCR.Models;
@@ -76,12 +77,12 @@ namespace MMP
             /// <summary>
             /// 中心点坐标
             /// </summary>
-            public PointF Center { get; set; }
+            public SKPoint Center { get; set; }
 
             /// <summary>
             /// 区域大小
             /// </summary>
-            public SizeF Size { get; set; }
+            public SKSize Size { get; set; }
 
             /// <summary>
             /// 旋转角度
@@ -91,7 +92,7 @@ namespace MMP
             /// <summary>
             /// 边界框的四个顶点
             /// </summary>
-            public PointF[] BoundingBox { get; set; } = Array.Empty<PointF>();
+            public SKPoint[] BoundingBox { get; set; } = Array.Empty<SKPoint>();
         }
 
         /// <summary>
@@ -130,15 +131,15 @@ namespace MMP
         }
 
         /// <summary>
-        /// 识别 Bitmap 图像中的文字
+        /// 识别 SKBitmap 图像中的文字
         /// </summary>
-        public OcrResult Recognize(Bitmap bitmap)
+        public OcrResult Recognize(SKBitmap skBitmap)
         {
             if (_ocr == null)
                 throw new InvalidOperationException("OCR 引擎未初始化，请先调用 Initialize()");
 
-            // 将 Bitmap 转换为 Mat
-            using Mat mat = BitmapToMat(bitmap);
+            // 将 SKBitmap 转换为 Mat
+            using Mat mat = SKBitmapToMat(skBitmap);
 
             // 执行 OCR
             var paddleResult = _ocr.Run(mat);
@@ -151,8 +152,8 @@ namespace MMP
                 {
                     Text = region.Text,
                     Confidence = region.Score,
-                    Center = new PointF(region.Rect.Center.X, region.Rect.Center.Y),
-                    Size = new SizeF(region.Rect.Size.Width, region.Rect.Size.Height),
+                    Center = new SKPoint(region.Rect.Center.X, region.Rect.Center.Y),
+                    Size = new SKSize(region.Rect.Size.Width, region.Rect.Size.Height),
                     Angle = region.Rect.Angle,
                     BoundingBox = GetBoundingBox(region.Rect)
                 };
@@ -165,7 +166,7 @@ namespace MMP
         /// <summary>
         /// 在指定区域内查找包含特定文本的区域
         /// </summary>
-        public List<OcrTextRegion> FindText(Bitmap bitmap, string searchText, bool ignoreCase = true)
+        public List<OcrTextRegion> FindText(SKBitmap bitmap, string searchText, bool ignoreCase = true)
         {
             var result = Recognize(bitmap);
             var comparison = ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
@@ -175,7 +176,7 @@ namespace MMP
         /// <summary>
         /// 检查图像中是否包含指定文本
         /// </summary>
-        public bool ContainsText(Bitmap bitmap, string searchText, bool ignoreCase = true)
+        public bool ContainsText(SKBitmap bitmap, string searchText, bool ignoreCase = true)
         {
             return FindText(bitmap, searchText, ignoreCase).Count > 0;
         }
@@ -183,67 +184,93 @@ namespace MMP
         /// <summary>
         /// 识别指定区域的文字
         /// </summary>
-        public OcrResult RecognizeRegion(Bitmap bitmap, Rectangle region)
+        public OcrResult RecognizeRegion(SKBitmap bitmap, SKRectI region)
         {
-            using var croppedBitmap = bitmap.Clone(region, bitmap.PixelFormat);
-            return Recognize(croppedBitmap);
+            var croppedBitmap = new SKBitmap(region.Width, region.Height);
+            if (!bitmap.ExtractSubset(croppedBitmap, region))
+            {
+                throw new Exception("无法提取图像子集");
+            }
+            
+            var result = Recognize(croppedBitmap);
+            croppedBitmap.Dispose();
+            return result;
         }
 
         /// <summary>
         /// 将识别结果可视化到图像上
         /// </summary>
-        public Bitmap VisualizeResult(Bitmap originalBitmap, OcrResult result)
+        public SKBitmap VisualizeResult(SKBitmap originalBitmap, OcrResult result)
         {
-            var visualized = new Bitmap(originalBitmap);
-            using var graphics = Graphics.FromImage(visualized);
-            using var pen = new Pen(Color.Red, 2);
-            using var font = new Font("Microsoft YaHei", 12);
-            using var textBrush = new SolidBrush(Color.Yellow);
-            using var bgBrush = new SolidBrush(Color.FromArgb(128, 0, 0, 0));
+            var visualized = originalBitmap.Copy();
+            using var canvas = new SKCanvas(visualized);
+            using var paint = new SKPaint
+            {
+                Style = SKPaintStyle.Stroke,
+                Color = SKColors.Red,
+                StrokeWidth = 2,
+                IsAntialias = true
+            };
+            using var textPaint = new SKPaint
+            {
+                Color = SKColors.Yellow,
+                IsAntialias = true
+            };
+            using var textFont = new SKFont
+            {
+                Size = 20
+            };
+            using var bgPaint = new SKPaint
+            {
+                Color = new SKColor(0, 0, 0, 128),
+                Style = SKPaintStyle.Fill
+            };
 
             foreach (var region in result.Regions)
             {
                 // 绘制边界框
                 if (region.BoundingBox.Length == 4)
                 {
-                    for (int i = 0; i < 4; i++)
+                    var path = new SKPath();
+                    path.MoveTo(region.BoundingBox[0]);
+                    for (int i = 1; i < 4; i++)
                     {
-                        var p1 = region.BoundingBox[i];
-                        var p2 = region.BoundingBox[(i + 1) % 4];
-                        graphics.DrawLine(pen, p1, p2);
+                        path.LineTo(region.BoundingBox[i]);
                     }
+                    path.Close();
+                    canvas.DrawPath(path, paint);
                 }
 
                 // 绘制文本
-                var textSize = graphics.MeasureString(region.Text, font);
-                float textX = region.Center.X - textSize.Width / 2;
-                float textY = region.Center.Y - region.Size.Height / 2 - textSize.Height - 2;
+                float textWidth = textFont.MeasureText(region.Text);
+                float textX = region.Center.X - textWidth / 2;
+                float textY = region.Center.Y - textFont.Size - 2;
 
-                graphics.FillRectangle(bgBrush, textX, textY, textSize.Width, textSize.Height);
-                graphics.DrawString(region.Text, font, textBrush, textX, textY);
+                canvas.DrawRect(textX, textY, textWidth, textFont.Size, bgPaint);
+                canvas.DrawText(region.Text, textX, textY + textFont.Size, textFont, textPaint);
             }
 
             return visualized;
         }
 
         /// <summary>
-        /// 将 Bitmap 转换为 OpenCV Mat
+        /// 将 SKBitmap 转换为 OpenCV Mat
         /// </summary>
-        private Mat BitmapToMat(Bitmap bitmap)
+        private static Mat SKBitmapToMat(SKBitmap skBitmap)
         {
-            using var ms = new MemoryStream();
-            bitmap.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
-            byte[] imageBytes = ms.ToArray();
+            using var image = SKImage.FromBitmap(skBitmap);
+            using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+            byte[] imageBytes = data.ToArray();
             return Cv2.ImDecode(imageBytes, ImreadModes.Color);
         }
 
         /// <summary>
         /// 获取旋转矩形的四个顶点
         /// </summary>
-        private PointF[] GetBoundingBox(OpenCvSharp.RotatedRect rect)
+        private static SKPoint[] GetBoundingBox(RotatedRect rect)
         {
             var points = Cv2.BoxPoints(rect);
-            return points.Select(p => new PointF(p.X, p.Y)).ToArray();
+            return points.Select(p => new SKPoint(p.X, p.Y)).ToArray();
         }
 
         /// <summary>
