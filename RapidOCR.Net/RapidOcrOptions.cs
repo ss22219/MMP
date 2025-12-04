@@ -11,7 +11,7 @@ namespace RapidOcrNet
             BoxScoreThresh = 0.5f,
             BoxThresh = 0.3f,
             UnClipRatio = 1.6f,
-            DoAngle = true,
+            DoAngle = false,
             MostAngle = false
         };
 

@@ -29,7 +29,8 @@ namespace RapidOcrNet
             {
                 GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_EXTENDED,
                 InterOpNumThreads = numThread,
-                IntraOpNumThreads = numThread
+                IntraOpNumThreads = numThread,
+                LogSeverityLevel = OrtLoggingLevel.ORT_LOGGING_LEVEL_ERROR // 只显示错误，隐藏警告
             };
 
             // 如果启用 GPU，添加 DirectML 执行提供程序
