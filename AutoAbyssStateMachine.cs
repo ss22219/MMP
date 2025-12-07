@@ -305,13 +305,14 @@ namespace MMP
         }
 
         /// <summary>
-        /// 启动防AFK线程（使用 Windows API 检测和移动鼠标）
+        /// 启动防AFK线程（鼠标移动 + 随机按键，绕过脚本检测）
         /// </summary>
         private void StartAntiAfkThread()
         {
             _antiAfkThread = new Thread(() =>
             {
-                Console.WriteLine("[防AFK线程] 启动");
+                var antiDetectConfig = _config.AntiDetection;
+                Console.WriteLine($"[防AFK线程] 启动 - 鼠标移动 + 随机按键 (启用: {antiDetectConfig.EnableRandomKeys})");
                 var random = new Random();
                 
                 // 获取初始鼠标位置
@@ -319,27 +320,36 @@ namespace MMP
                 GetCursorPos(out lastPos);
                 int idleSeconds = 0;
                 int moveCount = 0;
+                int keyPressCount = 0;
+                
+                // 随机按键池（Z, 1, 2, 3, 4）
+                string[] randomKeys = { "Z", "1", "2", "3", "4" };
+                
+                // 下次按键时间（从配置读取）
+                int nextKeyPressTime = random.Next(antiDetectConfig.RandomKeyMinInterval, antiDetectConfig.RandomKeyMaxInterval + 1);
+                int keyPressTimer = 0;
                 
                 while (!_shouldStop)
                 {
                     try
                     {
-                        // 获取当前鼠标位置
+                        // ========== 鼠标移动检测 ==========
                         POINT currentPos = new POINT();
                         GetCursorPos(out currentPos);
                         
                         // 检查鼠标是否移动
                         if (currentPos.X == lastPos.X && currentPos.Y == lastPos.Y)
                         {
-                            // 没动，计数+1
                             idleSeconds++;
                             
-                            // 5秒没动就自动移动
-                            if (idleSeconds >= 5)
+                            // 从配置读取移动阈值（随机间隔）
+                            int moveThreshold = random.Next(antiDetectConfig.MouseMoveMinInterval, antiDetectConfig.MouseMoveMaxInterval + 1);
+                            if (idleSeconds >= moveThreshold)
                             {
-                                // 随机移动 -2 到 2 像素
-                                int deltaX = random.Next(-2, 3);
-                                int deltaY = random.Next(-2, 3);
+                                // 从配置读取移动像素范围
+                                int maxPixels = antiDetectConfig.MouseMoveMaxPixels;
+                                int deltaX = random.Next(-maxPixels, maxPixels + 1);
+                                int deltaY = random.Next(-maxPixels, maxPixels + 1);
                                 
                                 // 确保至少移动1像素
                                 if (deltaX == 0 && deltaY == 0)
@@ -373,6 +383,45 @@ namespace MMP
                             lastPos = currentPos;
                         }
                         
+                        // ========== 随机按键发送（绕过键盘指纹检测）==========
+                        if (antiDetectConfig.EnableRandomKeys)
+                        {
+                            keyPressTimer++;
+                            
+                            if (keyPressTimer >= nextKeyPressTime && _controller != null)
+                            {
+                                // 随机选择 1-3 个按键
+                                int keyCount = random.Next(1, 4);
+                                var selectedKeys = new List<string>();
+                                
+                                for (int i = 0; i < keyCount; i++)
+                                {
+                                    string key = randomKeys[random.Next(randomKeys.Length)];
+                                    selectedKeys.Add(key);
+                                }
+                                
+                                // 发送按键序列（随机间隔）
+                                foreach (var key in selectedKeys)
+                                {
+                                    // 随机按键持续时间 (50-150ms)
+                                    double holdTime = 0.05 + random.NextDouble() * 0.1;
+                                    _controller.SendKey(key, holdTime);
+                                    
+                                    // 随机间隔 (100-500ms)
+                                    int interval = random.Next(100, 501);
+                                    Thread.Sleep(interval);
+                                    
+                                    keyPressCount++;
+                                }
+                                
+                                Console.WriteLine($"[防AFK] 发送随机按键: {string.Join(", ", selectedKeys)} (总计: {keyPressCount})");
+                                
+                                // 重置计时器，从配置读取下次间隔
+                                keyPressTimer = 0;
+                                nextKeyPressTime = random.Next(antiDetectConfig.RandomKeyMinInterval, antiDetectConfig.RandomKeyMaxInterval + 1);
+                            }
+                        }
+                        
                         // 每秒检查一次
                         Thread.Sleep(1000);
                     }
@@ -383,7 +432,7 @@ namespace MMP
                     }
                 }
                 
-                Console.WriteLine($"[防AFK线程] 停止 - 总移动次数: {moveCount}");
+                Console.WriteLine($"[防AFK线程] 停止 - 鼠标移动: {moveCount} 次, 按键: {keyPressCount} 次");
             })
             {
                 IsBackground = true,

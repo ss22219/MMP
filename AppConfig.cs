@@ -36,6 +36,11 @@ namespace MMP
         public MovementConfig Movement { get; set; } = new();
 
         /// <summary>
+        /// 防检测配置
+        /// </summary>
+        public AntiDetectionConfig AntiDetection { get; set; } = new();
+
+        /// <summary>
         /// 加载配置
         /// </summary>
         public static AppConfig Load()
@@ -148,6 +153,47 @@ namespace MMP
         /// 最小文本长度（默认 1）
         /// </summary>
         public int MinTextLength { get; set; } = 1;
+    }
+
+    /// <summary>
+    /// 防检测配置（Anti-Detection）
+    /// </summary>
+    public class AntiDetectionConfig
+    {
+        /// <summary>
+        /// 是否启用随机按键（默认 true）
+        /// </summary>
+        public bool EnableRandomKeys { get; set; } = true;
+
+        /// <summary>
+        /// 随机按键间隔最小值（秒，默认 3）
+        /// </summary>
+        public int RandomKeyMinInterval { get; set; } = 3;
+
+        /// <summary>
+        /// 随机按键间隔最大值（秒，默认 6）
+        /// </summary>
+        public int RandomKeyMaxInterval { get; set; } = 6;
+
+        /// <summary>
+        /// 鼠标移动间隔最小值（秒，默认 3）
+        /// </summary>
+        public int MouseMoveMinInterval { get; set; } = 3;
+
+        /// <summary>
+        /// 鼠标移动间隔最大值（秒，默认 7）
+        /// </summary>
+        public int MouseMoveMaxInterval { get; set; } = 7;
+
+        /// <summary>
+        /// 鼠标移动最小像素（默认 1）
+        /// </summary>
+        public int MouseMoveMinPixels { get; set; } = 1;
+
+        /// <summary>
+        /// 鼠标移动最大像素（默认 5）
+        /// </summary>
+        public int MouseMoveMaxPixels { get; set; } = 5;
     }
 
     /// <summary>

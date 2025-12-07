@@ -48,6 +48,15 @@ public partial class MainWindow : Window
     private TextBox NormalMoveDistanceTextBox = null!;
     private TextBox SprintDistanceTextBox = null!;
     private TextBox TooFarDistanceTextBox = null!;
+    
+    // 防检测配置控件
+    private CheckBox EnableRandomKeysCheckBox = null!;
+    private TextBox RandomKeyMinIntervalTextBox = null!;
+    private TextBox RandomKeyMaxIntervalTextBox = null!;
+    private TextBox MouseMoveMinIntervalTextBox = null!;
+    private TextBox MouseMoveMaxIntervalTextBox = null!;
+    private TextBox MouseMoveMinPixelsTextBox = null!;
+    private TextBox MouseMoveMaxPixelsTextBox = null!;
 
     public MainWindow()
     {
@@ -99,6 +108,15 @@ public partial class MainWindow : Window
         NormalMoveDistanceTextBox = this.FindControl<TextBox>("NormalMoveDistanceTextBox")!;
         SprintDistanceTextBox = this.FindControl<TextBox>("SprintDistanceTextBox")!;
         TooFarDistanceTextBox = this.FindControl<TextBox>("TooFarDistanceTextBox")!;
+        
+        // 防检测配置控件
+        EnableRandomKeysCheckBox = this.FindControl<CheckBox>("EnableRandomKeysCheckBox")!;
+        RandomKeyMinIntervalTextBox = this.FindControl<TextBox>("RandomKeyMinIntervalTextBox")!;
+        RandomKeyMaxIntervalTextBox = this.FindControl<TextBox>("RandomKeyMaxIntervalTextBox")!;
+        MouseMoveMinIntervalTextBox = this.FindControl<TextBox>("MouseMoveMinIntervalTextBox")!;
+        MouseMoveMaxIntervalTextBox = this.FindControl<TextBox>("MouseMoveMaxIntervalTextBox")!;
+        MouseMoveMinPixelsTextBox = this.FindControl<TextBox>("MouseMoveMinPixelsTextBox")!;
+        MouseMoveMaxPixelsTextBox = this.FindControl<TextBox>("MouseMoveMaxPixelsTextBox")!;
         
         var saveConfigButton = this.FindControl<Button>("SaveConfigButton")!;
         var clearLogButton = this.FindControl<Button>("ClearLogButton")!;
@@ -253,6 +271,15 @@ public partial class MainWindow : Window
         SprintDistanceTextBox.Text = _config.Movement.SprintDistance.ToString();
         TooFarDistanceTextBox.Text = _config.Movement.TooFarWarningDistance.ToString();
 
+        // 加载防检测配置
+        EnableRandomKeysCheckBox.IsChecked = _config.AntiDetection.EnableRandomKeys;
+        RandomKeyMinIntervalTextBox.Text = _config.AntiDetection.RandomKeyMinInterval.ToString();
+        RandomKeyMaxIntervalTextBox.Text = _config.AntiDetection.RandomKeyMaxInterval.ToString();
+        MouseMoveMinIntervalTextBox.Text = _config.AntiDetection.MouseMoveMinInterval.ToString();
+        MouseMoveMaxIntervalTextBox.Text = _config.AntiDetection.MouseMoveMaxInterval.ToString();
+        MouseMoveMinPixelsTextBox.Text = _config.AntiDetection.MouseMoveMinPixels.ToString();
+        MouseMoveMaxPixelsTextBox.Text = _config.AntiDetection.MouseMoveMaxPixels.ToString();
+
         // 设置热键输入框的键盘事件
         ForceExitHotkeyTextBox.KeyDown += HotkeyTextBox_KeyDown;
         ForceExitAbyssHotkeyTextBox.KeyDown += HotkeyTextBox_KeyDown;
@@ -300,6 +327,15 @@ public partial class MainWindow : Window
             _config.Movement.NormalMoveDistance = float.Parse(NormalMoveDistanceTextBox.Text ?? "600");
             _config.Movement.SprintDistance = float.Parse(SprintDistanceTextBox.Text ?? "2000");
             _config.Movement.TooFarWarningDistance = float.Parse(TooFarDistanceTextBox.Text ?? "20000");
+
+            // 保存防检测配置
+            _config.AntiDetection.EnableRandomKeys = EnableRandomKeysCheckBox.IsChecked ?? true;
+            _config.AntiDetection.RandomKeyMinInterval = int.Parse(RandomKeyMinIntervalTextBox.Text ?? "3");
+            _config.AntiDetection.RandomKeyMaxInterval = int.Parse(RandomKeyMaxIntervalTextBox.Text ?? "6");
+            _config.AntiDetection.MouseMoveMinInterval = int.Parse(MouseMoveMinIntervalTextBox.Text ?? "3");
+            _config.AntiDetection.MouseMoveMaxInterval = int.Parse(MouseMoveMaxIntervalTextBox.Text ?? "7");
+            _config.AntiDetection.MouseMoveMinPixels = int.Parse(MouseMoveMinPixelsTextBox.Text ?? "1");
+            _config.AntiDetection.MouseMoveMaxPixels = int.Parse(MouseMoveMaxPixelsTextBox.Text ?? "5");
 
             _config.Save();
             InfoText.Text = "配置已保存";

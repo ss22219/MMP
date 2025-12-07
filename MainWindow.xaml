@@ -352,6 +352,101 @@
                     </ScrollViewer>
                 </Border>
             </TabItem>
+
+            <!-- 防检测配置标签页 -->
+            <TabItem Header="🛡️ 防检测">
+                <Border Background="White" CornerRadius="8" Padding="20" Margin="0,10,0,0">
+                    <ScrollViewer>
+                        <StackPanel>
+                            <TextBlock Text="防检测配置" FontSize="18" FontWeight="Bold" Margin="0,0,0,15"/>
+                            
+                            <!-- 警告提示 -->
+                            <Border Background="#FFF3E0" CornerRadius="6" Padding="12" Margin="0,0,0,15">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="⚠️" FontSize="14" Margin="0,0,8,0"/>
+                                    <TextBlock Text="随机按键功能会发送 Z, 1, 2, 3, 4 按键，可能影响游戏操作" 
+                                               FontSize="12" Foreground="#F57C00" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" 
+                                  ColumnDefinitions="200,*,300">
+                                
+                                <!-- 启用随机按键 -->
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="启用随机按键:" 
+                                           FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
+                                <CheckBox Grid.Row="0" Grid.Column="1" Name="EnableRandomKeysCheckBox" 
+                                          Content="每隔几秒发送随机按键 (Z, 1, 2, 3, 4)" 
+                                          VerticalAlignment="Center" Margin="10,8"/>
+                                <TextBlock Grid.Row="0" Grid.Column="2" Text="打破固定按键模式，绕过检测" 
+                                           FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
+
+                                <!-- 随机按键最小间隔 -->
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="按键最小间隔 (秒):" 
+                                           FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
+                                <TextBox Grid.Row="1" Grid.Column="1" Name="RandomKeyMinIntervalTextBox" 
+                                         Height="32" Margin="10,8" Classes="modern"/>
+                                <TextBlock Grid.Row="1" Grid.Column="2" Text="默认 3 秒" 
+                                           FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
+
+                                <!-- 随机按键最大间隔 -->
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="按键最大间隔 (秒):" 
+                                           FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
+                                <TextBox Grid.Row="2" Grid.Column="1" Name="RandomKeyMaxIntervalTextBox" 
+                                         Height="32" Margin="10,8" Classes="modern"/>
+                                <TextBlock Grid.Row="2" Grid.Column="2" Text="默认 6 秒" 
+                                           FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
+
+                                <!-- 分隔线 -->
+                                <Border Grid.Row="3" Grid.ColumnSpan="3" Height="1" Background="#E0E0E0" Margin="0,15"/>
+
+                                <!-- 鼠标移动最小间隔 -->
+                                <TextBlock Grid.Row="4" Grid.Column="0" Text="鼠标最小间隔 (秒):" 
+                                           FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
+                                <TextBox Grid.Row="4" Grid.Column="1" Name="MouseMoveMinIntervalTextBox" 
+                                         Height="32" Margin="10,8" Classes="modern"/>
+                                <TextBlock Grid.Row="4" Grid.Column="2" Text="默认 3 秒" 
+                                           FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
+
+                                <!-- 鼠标移动最大间隔 -->
+                                <TextBlock Grid.Row="5" Grid.Column="0" Text="鼠标最大间隔 (秒):" 
+                                           FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
+                                <TextBox Grid.Row="5" Grid.Column="1" Name="MouseMoveMaxIntervalTextBox" 
+                                         Height="32" Margin="10,8" Classes="modern"/>
+                                <TextBlock Grid.Row="5" Grid.Column="2" Text="默认 7 秒" 
+                                           FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
+
+                                <!-- 鼠标移动最小像素 -->
+                                <TextBlock Grid.Row="6" Grid.Column="0" Text="鼠标最小移动 (像素):" 
+                                           FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
+                                <TextBox Grid.Row="6" Grid.Column="1" Name="MouseMoveMinPixelsTextBox" 
+                                         Height="32" Margin="10,8" Classes="modern"/>
+                                <TextBlock Grid.Row="6" Grid.Column="2" Text="默认 1 像素" 
+                                           FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
+
+                                <!-- 鼠标移动最大像素 -->
+                                <TextBlock Grid.Row="7" Grid.Column="0" Text="鼠标最大移动 (像素):" 
+                                           FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
+                                <TextBox Grid.Row="7" Grid.Column="1" Name="MouseMoveMaxPixelsTextBox" 
+                                         Height="32" Margin="10,8" Classes="modern"/>
+                                <TextBlock Grid.Row="7" Grid.Column="2" Text="默认 5 像素" 
+                                           FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
+                            </Grid>
+
+                            <!-- 说明信息 -->
+                            <Border Background="#E8F5E9" CornerRadius="6" Padding="12" Margin="0,15,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="💡 使用建议" FontSize="13" FontWeight="Bold" Margin="0,0,0,8"/>
+                                    <TextBlock Text="• 高频模式: 3-6秒间隔，适合日常使用" FontSize="12" Margin="0,2"/>
+                                    <TextBlock Text="• 超高频模式: 2-4秒间隔，最大随机性" FontSize="12" Margin="0,2"/>
+                                    <TextBlock Text="• 中频模式: 5-10秒间隔，平衡体验" FontSize="12" Margin="0,2"/>
+                                    <TextBlock Text="• 如果随机按键影响游戏，可以关闭该功能" FontSize="12" Margin="0,2" Foreground="#F57C00"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Border>
+            </TabItem>
         </TabControl>
 
         <!-- 底部状态栏 -->
