@@ -442,6 +442,7 @@ public class BattleEntitiesAPI
         try
         {
             int nameIndex = ReadInt32(new IntPtr(objectPtr.ToInt64() + UOBJECT_NAME));
+            if(nameIndex == 0) return "Invalid";
             int chunkOffset = nameIndex >> 16;
             int nameOffset = nameIndex & 0xFFFF;
 
@@ -700,7 +701,7 @@ public class BattleEntitiesAPI
 
             int elementSize = 24; // TSetElement size
 
-            for (int i = 0; i < mapData.ArrayNum; i++)
+            for (int i = 0; i < mapData.ArrayNum && i < 1000; i++)
             {
                 IntPtr elementAddr = new IntPtr(mapData.Data.ToInt64() + i * elementSize);
 
@@ -719,6 +720,8 @@ public class BattleEntitiesAPI
 
                     // 读取对象信息
                     string objectName = ReadFName(value);
+                    if (string.IsNullOrEmpty(objectName) || objectName == "Invalid" || objectName == "")
+                        continue;
                     IntPtr classPtr = ReadPointer(new IntPtr(value.ToInt64() + UOBJECT_CLASS));
                     string className = IsValidPointer(classPtr) ? ReadFName(classPtr) : "Unknown";
 

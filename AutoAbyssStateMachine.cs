@@ -322,8 +322,8 @@ namespace MMP
                 int moveCount = 0;
                 int keyPressCount = 0;
                 
-                // 随机按键池（Z, 1, 2, 3, 4）
-                string[] randomKeys = { "Z", "1", "2", "3", "4" };
+                // 随机按键池（Z, 1, 2, 3, 5）
+                string[] randomKeys = { "Z", "1", "2", "3", "5" };
                 
                 // 下次按键时间（从配置读取）
                 int nextKeyPressTime = random.Next(antiDetectConfig.RandomKeyMinInterval, antiDetectConfig.RandomKeyMaxInterval + 1);
