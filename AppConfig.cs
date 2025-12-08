@@ -1,8 +1,18 @@
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace MMP
 {
+    /// <summary>
+    /// 应用程序配置
+    /// </summary>
+    [JsonSourceGenerationOptions(WriteIndented = true)]
+    [JsonSerializable(typeof(AppConfig))]
+    internal partial class AppConfigJsonContext : JsonSerializerContext
+    {
+    }
+
     /// <summary>
     /// 应用程序配置
     /// </summary>
@@ -50,7 +60,7 @@ namespace MMP
                 if (File.Exists(ConfigPath))
                 {
                     var json = File.ReadAllText(ConfigPath);
-                    return JsonSerializer.Deserialize<AppConfig>(json) ?? new AppConfig();
+                    return JsonSerializer.Deserialize(json, AppConfigJsonContext.Default.AppConfig) ?? new AppConfig();
                 }
             }
             catch (System.Exception ex)
@@ -68,12 +78,7 @@ namespace MMP
         {
             try
             {
-                var options = new JsonSerializerOptions
-                {
-                    WriteIndented = true,
-                    Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-                };
-                var json = JsonSerializer.Serialize(this, options);
+                var json = JsonSerializer.Serialize(this, AppConfigJsonContext.Default.AppConfig);
                 File.WriteAllText(ConfigPath, json);
                 System.Console.WriteLine("配置已保存");
             }
@@ -225,5 +230,10 @@ namespace MMP
         /// 距离过远警告阈值（游戏单位，默认 20000 = 200米）
         /// </summary>
         public float TooFarWarningDistance { get; set; } = 20000;
+
+        /// <summary>
+        /// 高度差跳跃阈值（游戏单位，默认 50 = 0.5米）
+        /// </summary>
+        public float HeightDiffJumpThreshold { get; set; } = 50;
     }
 }

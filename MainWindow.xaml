@@ -234,7 +234,7 @@
                             <TextBlock Text="导航移动配置" FontSize="18" FontWeight="Bold" 
                                        Foreground="#333" Margin="0,0,0,15"/>
                             
-                            <Grid ColumnDefinitions="200,120,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                            <Grid ColumnDefinitions="200,120,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="简单跳跃距离:" 
                                            FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
                                 <TextBox Grid.Row="0" Grid.Column="1" Name="SimpleJumpDistanceTextBox" 
@@ -268,6 +268,13 @@
                                 <TextBox Grid.Row="4" Grid.Column="1" Name="TooFarDistanceTextBox" 
                                          Height="32" Margin="10,8" Classes="modern"/>
                                 <TextBlock Grid.Row="4" Grid.Column="2" Text="超过200米放弃导航 (默认 20000)" 
+                                           FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
+
+                                <TextBlock Grid.Row="5" Grid.Column="0" Text="高度差跳跃阈值:" 
+                                           FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
+                                <TextBox Grid.Row="5" Grid.Column="1" Name="HeightDiffJumpThresholdTextBox" 
+                                         Height="32" Margin="10,8" Classes="modern"/>
+                                <TextBlock Grid.Row="5" Grid.Column="2" Text="高度差超过0.5米触发二段跳 (默认 50)" 
                                            FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
                             </Grid>
 
@@ -364,7 +371,7 @@
                             <Border Background="#FFF3E0" CornerRadius="6" Padding="12" Margin="0,0,0,15">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="⚠️" FontSize="14" Margin="0,0,8,0"/>
-                                    <TextBlock Text="随机按键功能会发送 Z, 1, 2, 3, 4 按键，可能影响游戏操作" 
+                                    <TextBlock Text="随机按键功能会发送 Z, 1, 2, 3, 5 按键，可能影响游戏操作" 
                                                FontSize="12" Foreground="#F57C00" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </Border>
@@ -376,7 +383,7 @@
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="启用随机按键:" 
                                            FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
                                 <CheckBox Grid.Row="0" Grid.Column="1" Name="EnableRandomKeysCheckBox" 
-                                          Content="每隔几秒发送随机按键 (Z, 1, 2, 3, 4)" 
+                                          Content="每隔几秒发送随机按键 (Z, 1, 2, 3, 5)" 
                                           VerticalAlignment="Center" Margin="10,8"/>
                                 <TextBlock Grid.Row="0" Grid.Column="2" Text="打破固定按键模式，绕过检测" 
                                            FontSize="11" Foreground="#999" VerticalAlignment="Center"/>

@@ -95,7 +95,6 @@ public class EntityInfo
     public bool IsActor;
     public FVector Position;
     public List<string> ParentClasses = new List<string>();
-    public List<ComponentInfo> Components = new List<ComponentInfo>();
     public ENpcPetState InteractiveState = ENpcPetState.None; // 宠物交互状态
     public bool AlreadyDead = false; // 是否已死亡
     public bool IsActive = true; // 是否激活（用于ACombatItemBase）
@@ -107,7 +106,7 @@ public class EntityInfo
         string actorType = IsActor ? "[Actor]" : "[Entity]";
         string parents = ParentClasses.Count > 0 ? $" 继承: {string.Join(" -> ", ParentClasses)}" : "";
         string state = InteractiveState != ENpcPetState.None ? $" 状态:{InteractiveState}" : "";
-        return $"{actorType} {Name} ({ClassName}) ID:{EntityId} 位置:{Position} 组件:{Components.Count}个{state}{parents}";
+        return $"{actorType} {Name} ({ClassName}) ID:{EntityId} 位置:{Position}{state}{parents}";
     }
 }
 
@@ -568,19 +567,25 @@ public class BattleEntitiesAPI
         return ReadStruct<FRotator>(rotationAddr);
     }
 
-    // 获取类的继承链
+    // 获取类的继承链（优化：限制深度，提前退出）
     private List<string> GetClassHierarchy(IntPtr classPtr)
     {
         List<string> hierarchy = new List<string>();
         IntPtr currentClass = classPtr;
+        int maxDepth = 10; // 限制最大深度，避免无限循环
+        int depth = 0;
 
-        while (IsValidPointer(currentClass))
+        while (IsValidPointer(currentClass) && depth < maxDepth)
         {
             string className = ReadFName(currentClass);
             if (string.IsNullOrEmpty(className) || className == "Invalid" || className == "Error")
                 break;
 
             hierarchy.Add(className);
+            
+            // 如果已经找到 Actor，可以提前退出（优化）
+            if (className == "Actor" || className == "AActor")
+                break;
 
             // 读取父类 (UStruct::SuperStruct at offset 0x40)
             IntPtr superClass = ReadPointer(new IntPtr(currentClass.ToInt64() + 0x40));
@@ -588,6 +593,7 @@ public class BattleEntitiesAPI
                 break;
 
             currentClass = superClass;
+            depth++;
         }
 
         return hierarchy;
@@ -618,8 +624,12 @@ public class BattleEntitiesAPI
         }
     }
 
-    // 获取 Actor 的组件列表
-    private List<ComponentInfo> GetActorComponents(IntPtr actorPtr)
+    /// <summary>
+    /// 获取 Actor 的组件列表（公开方法，按需调用）
+    /// </summary>
+    /// <param name="actorPtr">Actor 指针</param>
+    /// <returns>组件列表</returns>
+    public List<ComponentInfo> GetActorComponents(IntPtr actorPtr)
     {
         List<ComponentInfo> components = new List<ComponentInfo>();
 
@@ -632,8 +642,8 @@ public class BattleEntitiesAPI
             if (componentsArray.Num <= 0 || !IsValidPointer(componentsArray.Data))
                 return components;
 
-            // 遍历组件数组
-            for (int i = 0; i < Math.Min(componentsArray.Num, 100); i++)
+            // 遍历组件数组（限制最多20个以提升性能）
+            for (int i = 0; i < Math.Min(componentsArray.Num, 20); i++)
             {
                 IntPtr componentPtrAddr = new IntPtr(componentsArray.Data.ToInt64() + i * 8);
                 IntPtr componentPtr = ReadPointer(componentPtrAddr);
@@ -738,15 +748,13 @@ public class BattleEntitiesAPI
                         ClassName = className,
                         IsActor = isActor,
                         ParentClasses = hierarchy,
-                        Position = new FVector { X = 0, Y = 0, Z = 0 },
-                        Components = new List<ComponentInfo>()
+                        Position = new FVector { X = 0, Y = 0, Z = 0 }
                     };
 
-                    // 如果是 Actor，获取位置和组件
+                    // 如果是 Actor，获取位置（组件按需调用 GetActorComponents）
                     if (isActor)
                     {
                         entity.Position = GetActorPosition(value);
-                        entity.Components = GetActorComponents(value);
                         
                         // 如果是怪物或Boss，读取 AlreadyDead 状态
                         if (className.StartsWith("BP_Mon_") || className.StartsWith("BP_Boss_"))
@@ -887,14 +895,12 @@ public class BattleEntitiesAPI
                         IsActor = isActor,
                         ParentClasses = hierarchy,
                         Position = new FVector { X = 0, Y = 0, Z = 0 },
-                        Components = new List<ComponentInfo>()
                     };
 
                     // 如果是 Actor，获取位置和组件
                     if (isActor)
                     {
                         entity.Position = GetActorPosition(value);
-                        entity.Components = GetActorComponents(value);
 
                         // 如果是宠物 NPC，读取 InteractiveState
                         if (className.Contains("PetNPC") || className.Contains("BP_PetNPC_Common"))
@@ -948,14 +954,6 @@ public class BattleEntitiesAPI
             Console.WriteLine($"  位置: {entity.Position}");
             Console.WriteLine($"  继承链: {string.Join(" -> ", entity.ParentClasses)}");
 
-            if (entity.Components.Count > 0)
-            {
-                Console.WriteLine($"  组件 ({entity.Components.Count} 个):");
-                foreach (var comp in entity.Components)
-                {
-                    Console.WriteLine($"    - {comp.Name} ({comp.ClassName})");
-                }
-            }
         }
 
         if (nonActors.Count > 0)

@@ -525,7 +525,8 @@ namespace MMP.States
             {
                 var playerLoc = BattleApi!.GetPlayerLocation();
                 float heightDiff = targetPos.Z - playerLoc.Z;
-                if (heightDiff > 50)
+                // 使用配置的高度差阈值
+                if (heightDiff > Config.Movement.HeightDiffJumpThreshold)
                 {
                     Console.WriteLine($"  → 二段跳（高度差 {heightDiff / 100:F1}米）");
                     await PerformDoubleJumpAsync(targetPos, needInteract, ct);

@@ -48,6 +48,7 @@ public partial class MainWindow : Window
     private TextBox NormalMoveDistanceTextBox = null!;
     private TextBox SprintDistanceTextBox = null!;
     private TextBox TooFarDistanceTextBox = null!;
+    private TextBox HeightDiffJumpThresholdTextBox = null!;
     
     // 防检测配置控件
     private CheckBox EnableRandomKeysCheckBox = null!;
@@ -108,6 +109,7 @@ public partial class MainWindow : Window
         NormalMoveDistanceTextBox = this.FindControl<TextBox>("NormalMoveDistanceTextBox")!;
         SprintDistanceTextBox = this.FindControl<TextBox>("SprintDistanceTextBox")!;
         TooFarDistanceTextBox = this.FindControl<TextBox>("TooFarDistanceTextBox")!;
+        HeightDiffJumpThresholdTextBox = this.FindControl<TextBox>("HeightDiffJumpThresholdTextBox")!;
         
         // 防检测配置控件
         EnableRandomKeysCheckBox = this.FindControl<CheckBox>("EnableRandomKeysCheckBox")!;
@@ -270,6 +272,7 @@ public partial class MainWindow : Window
         NormalMoveDistanceTextBox.Text = _config.Movement.NormalMoveDistance.ToString();
         SprintDistanceTextBox.Text = _config.Movement.SprintDistance.ToString();
         TooFarDistanceTextBox.Text = _config.Movement.TooFarWarningDistance.ToString();
+        HeightDiffJumpThresholdTextBox.Text = _config.Movement.HeightDiffJumpThreshold.ToString();
 
         // 加载防检测配置
         EnableRandomKeysCheckBox.IsChecked = _config.AntiDetection.EnableRandomKeys;
@@ -327,6 +330,7 @@ public partial class MainWindow : Window
             _config.Movement.NormalMoveDistance = float.Parse(NormalMoveDistanceTextBox.Text ?? "600");
             _config.Movement.SprintDistance = float.Parse(SprintDistanceTextBox.Text ?? "2000");
             _config.Movement.TooFarWarningDistance = float.Parse(TooFarDistanceTextBox.Text ?? "20000");
+            _config.Movement.HeightDiffJumpThreshold = float.Parse(HeightDiffJumpThresholdTextBox.Text ?? "50");
 
             // 保存防检测配置
             _config.AntiDetection.EnableRandomKeys = EnableRandomKeysCheckBox.IsChecked ?? true;
