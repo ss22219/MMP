@@ -316,7 +316,7 @@ namespace MMP.States
         FVector lastPosition;
 
         const int NAV_STUCK_CHECK_SECONDS = 30;
-        const int POSITION_CHECK_SECONDS = 1;
+        const int POSITION_CHECK_SECONDS = 2;
         /// <summary>
         /// 通用导航到目标位置（增强版）
         /// </summary>

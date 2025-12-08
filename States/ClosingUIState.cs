@@ -34,11 +34,13 @@ namespace MMP.States
                 .Where(r => uiTexts.Any(text => r.Text.Contains(text)))
                 .ToList();
 
-            if (detectedUI.Any())
+            if (detectedUI.Count != 0)
             {
                 var uiText = string.Join(", ", detectedUI.Select(r => r.Text).Take(3));
                 Console.WriteLine($"  → 检测到: {uiText}");
 
+                if(uiText.Contains("探索完成"))
+                await context.DelayAsync(1500, ct);
                 // 点击右上角关闭
                 var (winWidth, winHeight) = WindowHelper.GetWindowSize(context.WindowHandle);
                 context.Controller.Click(winWidth - 70, 50);
