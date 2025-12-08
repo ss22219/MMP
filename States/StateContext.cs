@@ -43,14 +43,7 @@ namespace MMP.States
         /// </summary>
         public async Task DelayAsync(int milliseconds, CancellationToken ct)
         {
-            try
-            {
-                await Task.Delay(milliseconds, ct).ConfigureAwait(true);
-            }
-            catch (TaskCanceledException)
-            {
-                // 被取消是正常的，不需要处理
-            }
+            await Task.Delay(milliseconds, ct).ConfigureAwait(true);
         }
 
         /// <summary>

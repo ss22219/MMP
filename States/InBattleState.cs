@@ -64,10 +64,38 @@ namespace MMP.States
 
                 if (monsters.Count == 0)
                 {
-                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] 检测到战斗文字但无怪物，向前移动3秒触发");
+                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] 检测到战斗文字但无怪物，向前移动触发（每500ms检查）");
                     context.Controller.SendKeyDown("W");
                     context.Controller.SendKeyDown("LSHIFT");
-                    await context.DelayAsync(3000, ct);
+                    
+                    // 最多移动3秒，每500ms检查一次
+                    for (int i = 0; i < 6; i++)
+                    {
+                        await context.DelayAsync(500, ct);
+                        
+                        // 每次检查是否有怪物出现
+                        var checkEntities = context.BattleApi.GetBattleEntities();
+                        var checkMonsters = checkEntities.Where(e =>
+                        {
+                            if (!e.IsActor || !(e.ClassName.StartsWith("BP_Mon_") || e.ClassName.StartsWith("BP_Boss_")))
+                                return false;
+                            if (!e.ParentClasses.Any(c => c.Contains("MonsterCharacter")))
+                                return false;
+                            if (string.IsNullOrEmpty(e.Name) || e.Name == "None")
+                                return false;
+                            if (e.AlreadyDead)
+                                return false;
+                            float distance = CalculateDistance(cameraLoc, e.Position);
+                            return distance <= context.Config.Battle.MonsterDetectionRange;
+                        }).ToList();
+                        
+                        if (checkMonsters.Count > 0)
+                        {
+                            Console.WriteLine($"  ✓ 检测到怪物，停止移动");
+                            break;
+                        }
+                    }
+                    
                     context.Controller.SendKeyUp("LSHIFT");
                     context.Controller.SendKeyUp("W");
                     await context.DelayAsync(500, ct);

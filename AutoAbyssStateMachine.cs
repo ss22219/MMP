@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Avalonia.Threading;
 using MMP.States;
 
 namespace MMP
@@ -29,99 +30,61 @@ namespace MMP
 
         private GameState _currentState = GameState.MainMenu;
         private readonly object _stateLock = new object();
-        
+
         // OCR 线程相关
         private Thread? _ocrThread;
         private volatile bool _shouldStop = false;
         private OcrEngine.OcrResult? _latestOcrResult = null;
         private readonly object _ocrResultLock = new object();
-        
+
         // OCR 完成事件（只定义一次）
         private event Action<OcrEngine.OcrResult>? OnOcrCompleted;
-        
+
         // 防AFK线程相关
         private Thread? _antiAfkThread;
-        
+
         // 组件
         private IntPtr _hwnd;
         private OcrEngine? _ocrEngine;
         private KeyboardMouseController? _controller;
         private BattleEntitiesAPI? _battleApi;
         private AppConfig _config = new();
-        
+
         // 状态数据
         private DateTime _stateStartTime = DateTime.Now;
-        
+
         // 状态处理器缓存（保持实例状态）
         private readonly Dictionary<GameState, IStateHandler> _stateHandlers = new();
-        
+
         // 状态上下文
         private StateContext? _stateContext;
-        
+
         // 同步上下文（用于停止）
-        private SingleThreadSyncContext? _syncContext;
-        
+
         public GameState CurrentState
         {
             get { lock (_stateLock) { return _currentState; } }
             private set { lock (_stateLock) { _currentState = value; } }
         }
 
-        public void Run()
-        {
-            if (!Initialize())
-                return;
-
-            StartOcrThread();
-            StartExitMonitorThread();
-            StartAntiAfkThread();
-            
-            // 如果当前有同步上下文（WPF Dispatcher），直接使用它
-            var currentContext = SynchronizationContext.Current;
-            if (currentContext != null)
-            {
-                // 在当前同步上下文（WPF UI 线程）上运行
-                currentContext.Post(async _ =>
-                {
-                    await MainLoopAsync();
-                }, null);
-            }
-            else
-            {
-                // 没有同步上下文，使用自定义的单线程上下文
-                _syncContext = new SingleThreadSyncContext();
-                SynchronizationContext.SetSynchronizationContext(_syncContext);
-
-                _syncContext.Post(async _ =>
-                {
-                    await MainLoopAsync();
-                    _syncContext.Complete();
-                }, null);
-
-                _syncContext.RunOnCurrentThread();
-                Cleanup();
-            }
-        }
-        
         /// <summary>
         /// 异步运行状态机（用于 WPF）
         /// </summary>
-        public async Task RunAsync()
+        public async Task RunAsync(CancellationToken ct)
         {
             if (!Initialize())
                 return;
 
             StartOcrThread();
-            StartExitMonitorThread();
             StartAntiAfkThread();
-            
-            // 在后台线程运行主循环，避免阻塞 UI
-            await Task.Run(async () =>
+            try
             {
-                await MainLoopAsync();
-            });
-            
-            Cleanup();
+                await MainLoopAsync(ct);
+            }
+            catch
+            {
+                Cleanup();
+            }
         }
 
         /// <summary>
@@ -133,41 +96,11 @@ namespace MMP
             _shouldStop = true;
             _currentStateCts?.Cancel();
             _currentWaitCts?.Cancel();
-            
-            // 完成同步上下文，让 RunOnCurrentThread 退出
-            _syncContext?.Complete();
         }
 
-        // 热键监听已移至 UI 层，此方法保留为空以保持兼容性
-        private void StartExitMonitorThread()
-        {
-            // 热键功能现在由 WPF UI 处理
-        }
-
-        /// <summary>
-        /// 强制退出深渊（切换到 ForceExiting 状态）
-        /// </summary>
-        private void PerformForceExitAbyss()
-        {
-            Console.WriteLine("  → 切换到强制退出状态");
-            
-            // 取消当前状态
-            _currentStateCts?.Cancel();
-            
-            // 切换到强制退出状态
-            TransitionTo(GameState.ForceExiting);
-            
-            // 重置所有状态处理器（清除内部状态）
-            ResetAllStateHandlers();
-        }
 
         private bool Initialize()
         {
-            Console.WriteLine("=== 深渊自动化状态机 ===");
-            Console.WriteLine("按 F10 启动/停止");
-            Console.WriteLine("按 F12 强制退出深渊");
-            Console.WriteLine();
-
             // 加载配置
             _config = AppConfig.Load();
             Console.WriteLine($"配置已加载:");
@@ -215,11 +148,11 @@ namespace MMP
             // 初始化战斗 API
             _battleApi = new BattleEntitiesAPI("EM-Win64-Shipping");
             Console.WriteLine("✓ 战斗 API 初始化完成");
-            
+
             // 初始化状态上下文
             _stateContext = new StateContext(
-                _hwnd, 
-                _controller, 
+                _hwnd,
+                _controller,
                 _battleApi,
                 _config,
                 GetLatestOcrResult,
@@ -247,7 +180,7 @@ namespace MMP
                     {
                         // 计算距离上次 OCR 的时间
                         var elapsed = (DateTime.Now - lastOcrTime).TotalMilliseconds;
-                        
+
                         // 如果还没到间隔时间，等待
                         if (elapsed < ocrIntervalMs)
                         {
@@ -263,7 +196,7 @@ namespace MMP
                         if (screenshot != null && _ocrEngine != null)
                         {
                             ocrCount++;
-                            
+
                             var result = _ocrEngine.Recognize(screenshot);
                             if (result != null && result.Regions != null)
                             {
@@ -272,7 +205,7 @@ namespace MMP
                                 {
                                     _latestOcrResult = result;
                                 }
-                                
+
                                 // 触发 OCR 完成事件
                                 OnOcrCompleted?.Invoke(result);
                             }
@@ -314,21 +247,21 @@ namespace MMP
                 var antiDetectConfig = _config.AntiDetection;
                 Console.WriteLine($"[防AFK线程] 启动 - 鼠标移动 + 随机按键 (启用: {antiDetectConfig.EnableRandomKeys})");
                 var random = new Random();
-                
+
                 // 获取初始鼠标位置
                 POINT lastPos = new POINT();
                 GetCursorPos(out lastPos);
                 int idleSeconds = 0;
                 int moveCount = 0;
                 int keyPressCount = 0;
-                
+
                 // 随机按键池（Z, 1, 2, 3, 5）
                 string[] randomKeys = { "Z", "1", "2", "3", "5" };
-                
+
                 // 下次按键时间（从配置读取）
                 int nextKeyPressTime = random.Next(antiDetectConfig.RandomKeyMinInterval, antiDetectConfig.RandomKeyMaxInterval + 1);
                 int keyPressTimer = 0;
-                
+
                 while (!_shouldStop)
                 {
                     try
@@ -336,12 +269,12 @@ namespace MMP
                         // ========== 鼠标移动检测 ==========
                         POINT currentPos = new POINT();
                         GetCursorPos(out currentPos);
-                        
+
                         // 检查鼠标是否移动
                         if (currentPos.X == lastPos.X && currentPos.Y == lastPos.Y)
                         {
                             idleSeconds++;
-                            
+
                             // 从配置读取移动阈值（随机间隔）
                             int moveThreshold = random.Next(antiDetectConfig.MouseMoveMinInterval, antiDetectConfig.MouseMoveMaxInterval + 1);
                             if (idleSeconds >= moveThreshold)
@@ -350,27 +283,27 @@ namespace MMP
                                 int maxPixels = antiDetectConfig.MouseMoveMaxPixels;
                                 int deltaX = random.Next(-maxPixels, maxPixels + 1);
                                 int deltaY = random.Next(-maxPixels, maxPixels + 1);
-                                
+
                                 // 确保至少移动1像素
                                 if (deltaX == 0 && deltaY == 0)
                                     deltaX = random.Next(0, 2) == 0 ? -1 : 1;
-                                
+
                                 int newX = currentPos.X + deltaX;
                                 int newY = currentPos.Y + deltaY;
-                                
+
                                 // 限制在屏幕范围内
                                 newX = Math.Max(0, Math.Min(GetSystemMetrics(0) - 1, newX));
                                 newY = Math.Max(0, Math.Min(GetSystemMetrics(1) - 1, newY));
-                                
+
                                 // 移动鼠标
                                 SetCursorPos(newX, newY);
                                 moveCount++;
-                                
+
                                 // 验证移动
                                 Thread.Sleep(50);
                                 POINT verifyPos = new POINT();
                                 GetCursorPos(out verifyPos);
-                                
+
                                 // 重置计数
                                 idleSeconds = 0;
                                 lastPos = verifyPos;
@@ -382,46 +315,46 @@ namespace MMP
                             idleSeconds = 0;
                             lastPos = currentPos;
                         }
-                        
+
                         // ========== 随机按键发送（绕过键盘指纹检测）==========
                         if (antiDetectConfig.EnableRandomKeys)
                         {
                             keyPressTimer++;
-                            
+
                             if (keyPressTimer >= nextKeyPressTime && _controller != null)
                             {
                                 // 随机选择 1-3 个按键
                                 int keyCount = random.Next(1, 4);
                                 var selectedKeys = new List<string>();
-                                
+
                                 for (int i = 0; i < keyCount; i++)
                                 {
                                     string key = randomKeys[random.Next(randomKeys.Length)];
                                     selectedKeys.Add(key);
                                 }
-                                
+
                                 // 发送按键序列（随机间隔）
                                 foreach (var key in selectedKeys)
                                 {
                                     // 随机按键持续时间 (50-150ms)
                                     double holdTime = 0.05 + random.NextDouble() * 0.1;
                                     _controller.SendKey(key, holdTime);
-                                    
+
                                     // 随机间隔 (100-500ms)
                                     int interval = random.Next(100, 501);
                                     Thread.Sleep(interval);
-                                    
+
                                     keyPressCount++;
                                 }
-                                
+
                                 Console.WriteLine($"[防AFK] 发送随机按键: {string.Join(", ", selectedKeys)} (总计: {keyPressCount})");
-                                
+
                                 // 重置计时器，从配置读取下次间隔
                                 keyPressTimer = 0;
                                 nextKeyPressTime = random.Next(antiDetectConfig.RandomKeyMinInterval, antiDetectConfig.RandomKeyMaxInterval + 1);
                             }
                         }
-                        
+
                         // 每秒检查一次
                         Thread.Sleep(1000);
                     }
@@ -431,27 +364,27 @@ namespace MMP
                         Thread.Sleep(1000);
                     }
                 }
-                
+
                 Console.WriteLine($"[防AFK线程] 停止 - 鼠标移动: {moveCount} 次, 按键: {keyPressCount} 次");
             })
             {
                 IsBackground = true,
                 Name = "Anti-AFK Thread"
             };
-            
+
             _antiAfkThread.Start();
         }
-        
+
         // Windows API for mouse position
         [System.Runtime.InteropServices.DllImport("user32.dll")]
         private static extern bool GetCursorPos(out POINT lpPoint);
-        
+
         [System.Runtime.InteropServices.DllImport("user32.dll")]
         private static extern bool SetCursorPos(int x, int y);
-        
+
         [System.Runtime.InteropServices.DllImport("user32.dll")]
         private static extern int GetSystemMetrics(int nIndex);
-        
+
         [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
         private struct POINT
         {
@@ -474,10 +407,10 @@ namespace MMP
         private CancellationTokenSource? _currentStateCts;
         private GameState? _nextState;
 
-        private async Task MainLoopAsync()
+        private async Task MainLoopAsync(CancellationToken ct)
         {
             Console.WriteLine("=== 主循环启动 ===");
-            
+
             while (!_shouldStop)
             {
                 try
@@ -485,9 +418,9 @@ namespace MMP
                     // 激活窗口（仅在前台模式需要）
                     if (_controller != null && !_controller.BackgroundMode)
                         _controller.Activate();
-                    
+
                     // 检查状态超时（ForceExiting 状态不检查超时）
-                    if (CurrentState != GameState.ForceExiting && 
+                    if (CurrentState != GameState.ForceExiting &&
                         (DateTime.Now - _stateStartTime).TotalSeconds > _config.Timeouts.StateTimeout)
                     {
                         Console.WriteLine($"⚠ 状态超时 ({CurrentState})，强制退出深渊");
@@ -500,12 +433,12 @@ namespace MMP
                     // 为当前状态创建取消令牌
                     _currentStateCts = new CancellationTokenSource();
                     _nextState = null;
-                    
+
                     // 【临时禁用】订阅 OCR 事件，检测状态变化
                     // 让状态有机会完整执行，避免被立即中断
                     Action<OcrEngine.OcrResult>? stateChangeHandler = null;
-                    
-                 
+
+
                     stateChangeHandler = (ocr) =>
                     {
                         var newState = StateDecider(ocr, CurrentState);
@@ -519,7 +452,7 @@ namespace MMP
                         }
                     };
                     OnOcrCompleted += stateChangeHandler;
-                    
+
 
                     // 根据当前状态执行对应逻辑
                     IStateHandler? currentHandler = null;
@@ -536,7 +469,7 @@ namespace MMP
                         // 状态被中断，调用清理
                         if (currentHandler != null && _stateContext != null)
                             currentHandler.Cleanup(_stateContext);
-                        
+
                         // 转换到新状态
                         if (_nextState != null)
                             TransitionTo(_nextState.Value);
@@ -549,7 +482,7 @@ namespace MMP
                         _currentStateCts?.Dispose();
                         _currentStateCts = null;
                     }
-                    
+
                     // 状态执行完成后，检查是否需要转换状态
                     var finalOcrResult = GetLatestOcrResult();
                     if (finalOcrResult != null)
@@ -561,14 +494,17 @@ namespace MMP
                             TransitionTo(newState.Value);
                         }
                     }
-
-                    Thread.Sleep(100);
+                    await Task.Delay(100, ct);
+                }
+                catch (TaskCanceledException)
+                {
+                    return;
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"主循环错误: {ex.Message}");
                     Console.WriteLine($"堆栈跟踪:\n{ex.StackTrace}");
-                    Thread.Sleep(1000);
+                    await Task.Delay(1000, ct);
                 }
             }
         }
@@ -638,20 +574,13 @@ namespace MMP
             Console.WriteLine("=== 清理资源 ===");
             _shouldStop = true;
             _ocrThread?.Join(2000);
+            _antiAfkThread?.Join(2000);
             _ocrEngine?.Dispose();
             _controller?.Dispose();
             Console.WriteLine("✓ 清理完成");
         }
-
-        // Main 方法已移至 App.xaml.cs（WPF 入口点）
-        // 如果需要控制台模式，可以取消注释以下代码：
-        // static void Main(string[] args)
-        // {
-        //     var stateMachine = new AutoAbyssStateMachine();
-        //     stateMachine.Run();
-        // }
     }
-    
+
     public class SingleThreadSyncContext : SynchronizationContext
     {
         private readonly BlockingCollection<(SendOrPostCallback, object?)> _queue = new();

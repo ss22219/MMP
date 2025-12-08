@@ -1,4 +1,5 @@
 using System;
+using System.Linq.Expressions;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,7 +18,9 @@ public partial class MainWindow : Window
     private AutoAbyssStateMachine? _stateMachine;
     private Thread? _hotkeyThread;
     private volatile bool _shouldStopHotkey = false;
-    
+    private CancellationTokenSource? _runningCts;
+    private CancellationToken? _stopingToken;
+
     // Windows API for hotkey detection
     [LibraryImport("user32.dll")]
     private static partial short GetAsyncKeyState(int vKey);
@@ -49,7 +52,7 @@ public partial class MainWindow : Window
     private TextBox SprintDistanceTextBox = null!;
     private TextBox TooFarDistanceTextBox = null!;
     private TextBox HeightDiffJumpThresholdTextBox = null!;
-    
+
     // 防检测配置控件
     private CheckBox EnableRandomKeysCheckBox = null!;
     private TextBox RandomKeyMinIntervalTextBox = null!;
@@ -63,16 +66,16 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         _config = AppConfig.Load();
-        
+
         // 初始化控件引用
         InitializeControls();
-        
+
         // 加载配置
         LoadConfig();
-        
+
         // 重定向控制台输出到日志窗口
         Console.SetOut(new TextBoxWriter(LogTextBox));
-        
+
         // 启动热键监听
         StartHotkeyMonitor();
     }
@@ -110,7 +113,7 @@ public partial class MainWindow : Window
         SprintDistanceTextBox = this.FindControl<TextBox>("SprintDistanceTextBox")!;
         TooFarDistanceTextBox = this.FindControl<TextBox>("TooFarDistanceTextBox")!;
         HeightDiffJumpThresholdTextBox = this.FindControl<TextBox>("HeightDiffJumpThresholdTextBox")!;
-        
+
         // 防检测配置控件
         EnableRandomKeysCheckBox = this.FindControl<CheckBox>("EnableRandomKeysCheckBox")!;
         RandomKeyMinIntervalTextBox = this.FindControl<TextBox>("RandomKeyMinIntervalTextBox")!;
@@ -119,26 +122,26 @@ public partial class MainWindow : Window
         MouseMoveMaxIntervalTextBox = this.FindControl<TextBox>("MouseMoveMaxIntervalTextBox")!;
         MouseMoveMinPixelsTextBox = this.FindControl<TextBox>("MouseMoveMinPixelsTextBox")!;
         MouseMoveMaxPixelsTextBox = this.FindControl<TextBox>("MouseMoveMaxPixelsTextBox")!;
-        
+
         var saveConfigButton = this.FindControl<Button>("SaveConfigButton")!;
         var clearLogButton = this.FindControl<Button>("ClearLogButton")!;
-        
+
         // 连接事件处理器
         StartButton.Click += async (s, e) => await StartButton_Click(s, e);
         StopButton.Click += StopButton_Click;
         saveConfigButton.Click += SaveConfigButton_Click;
         clearLogButton.Click += ClearLogButton_Click;
     }
-    
+
     private void StartHotkeyMonitor()
     {
         _hotkeyThread = new Thread(() =>
         {
             Console.WriteLine($"[热键监听] 已启动 - {_config.Hotkeys.ForceExit}: 启动/停止, {_config.Hotkeys.ForceExitAbyss}: 强制退出深渊");
-            
+
             bool lastStopState = false;
             bool lastForceExitAbyssState = false;
-            
+
             while (!_shouldStopHotkey)
             {
                 try
@@ -146,10 +149,10 @@ public partial class MainWindow : Window
                     // 获取配置的热键对应的虚拟键码
                     int stopKey = GetVirtualKeyCode(_config.Hotkeys.ForceExit);
                     int forceExitAbyssKey = GetVirtualKeyCode(_config.Hotkeys.ForceExitAbyss);
-                    
+
                     bool currentStopState = (GetAsyncKeyState(stopKey) & 0x8000) != 0;
                     bool currentForceExitAbyssState = (GetAsyncKeyState(forceExitAbyssKey) & 0x8000) != 0;
-                    
+
                     // F10: 启动/停止切换
                     if (currentStopState && !lastStopState)
                     {
@@ -157,29 +160,15 @@ public partial class MainWindow : Window
                         {
                             if (_stateMachine != null)
                             {
-                                // 当前正在运行 -> 停止
-                                Console.WriteLine($"\n[{_config.Hotkeys.ForceExit}] 停止运行");
-                                StopButton.IsEnabled = false;
-                                InfoText.Text = "正在停止...";
-                                
-                                await Task.Run(() => _stateMachine.Stop());
-                                await Task.Delay(1000);
-                                
-                                _stateMachine = null;
-                                StartButton.IsEnabled = true;
-                                StopButton.IsEnabled = false;
-                                InfoText.Text = "已停止";
-                                Console.WriteLine("程序已停止");
+                                StopButton_Click(null, null);
                             }
                             else
                             {
-                                // 当前已停止 -> 启动
-                                Console.WriteLine($"\n[{_config.Hotkeys.ForceExit}] 启动运行");
                                 await StartButton_Click(null, null);
                             }
                         });
                     }
-                    
+
                     // 强制退出深渊
                     if (currentForceExitAbyssState && !lastForceExitAbyssState)
                     {
@@ -197,7 +186,7 @@ public partial class MainWindow : Window
                             }
                         });
                     }
-                    
+
                     lastStopState = currentStopState;
                     lastForceExitAbyssState = currentForceExitAbyssState;
                 }
@@ -205,20 +194,20 @@ public partial class MainWindow : Window
                 {
                     Console.WriteLine($"[热键监听] 错误: {ex.Message}");
                 }
-                
+
                 Thread.Sleep(50);
             }
-            
+
             Console.WriteLine("[热键监听] 已停止");
         })
         {
             IsBackground = true,
             Name = "Hotkey Monitor Thread"
         };
-        
+
         _hotkeyThread.Start();
     }
-    
+
     private static int GetVirtualKeyCode(string keyName)
     {
         // 将按键名称转换为虚拟键码
@@ -343,7 +332,7 @@ public partial class MainWindow : Window
 
             _config.Save();
             InfoText.Text = "配置已保存";
-            
+
             var messageBox = new Window
             {
                 Title = "提示",
@@ -360,13 +349,13 @@ public partial class MainWindow : Window
                     }
                 }
             };
-            
+
             var button = ((StackPanel)messageBox.Content).Children[1] as Button;
             if (button != null)
             {
                 button.Click += (s, args) => messageBox.Close();
             }
-            
+
             messageBox.ShowDialog(this);
         }
         catch (Exception ex)
@@ -387,13 +376,13 @@ public partial class MainWindow : Window
                     }
                 }
             };
-            
+
             var button = ((StackPanel)errorBox.Content).Children[1] as Button;
             if (button != null)
             {
                 button.Click += (s, args) => errorBox.Close();
             }
-            
+
             errorBox.ShowDialog(this);
         }
     }
@@ -418,31 +407,35 @@ public partial class MainWindow : Window
                     }
                 }
             };
-            
+
             var button = ((StackPanel)warningBox.Content).Children[1] as Button;
             if (button != null)
             {
                 button.Click += (s, args) => warningBox.Close();
             }
-            
+
             await warningBox.ShowDialog(this);
             return;
         }
 
-        StartButton.IsEnabled = false;
-        StopButton.IsEnabled = true;
-        StatusText.Text = "运行中";
-        InfoText.Text = "程序已启动";
-
         try
         {
             _stateMachine = new AutoAbyssStateMachine();
-            await _stateMachine.RunAsync();
+            _runningCts = new CancellationTokenSource();
+            var stopingCts = new CancellationTokenSource();
+            _stopingToken = stopingCts.Token;
+
+            StartButton.IsEnabled = false;
+            StopButton.IsEnabled = true;
+            StatusText.Text = "运行中";
+            InfoText.Text = "程序已启动";
+            await _stateMachine.RunAsync(_runningCts.Token);
+            stopingCts.Cancel();
         }
         catch (Exception ex)
         {
             Console.WriteLine($"运行错误: {ex.Message}");
-            
+
             var errorBox = new Window
             {
                 Title = "错误",
@@ -459,13 +452,13 @@ public partial class MainWindow : Window
                     }
                 }
             };
-            
+
             var button = ((StackPanel)errorBox.Content).Children[1] as Button;
             if (button != null)
             {
                 button.Click += (s, args) => errorBox.Close();
             }
-            
+
             await errorBox.ShowDialog(this);
         }
         finally
@@ -478,23 +471,23 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void StopButton_Click(object? sender, RoutedEventArgs e)
+    private async void StopButton_Click(object? sender, RoutedEventArgs? e)
     {
         if (_stateMachine != null)
         {
             StopButton.IsEnabled = false;
             Console.WriteLine("正在停止程序...");
             InfoText.Text = "正在停止...";
-            
-            // 异步停止，避免阻塞 UI
-            await Task.Run(() =>
-            {
-                _stateMachine.Stop();
-            });
-            
-            // 等待状态机完全停止
-            await Task.Delay(1000);
-            
+
+            _stateMachine.Stop();
+            if (_runningCts != null)
+                await _runningCts.CancelAsync();
+            if (_stopingToken != null)
+                try
+                {
+                    await Task.Delay(10000, _stopingToken.Value);
+                }
+                catch { }
             _stateMachine = null;
             StartButton.IsEnabled = true;
             StopButton.IsEnabled = false;
