@@ -262,8 +262,8 @@ namespace MMP
             var info = skBitmap.Info;
             var pixels = skBitmap.GetPixels();
             
-            // SKBitmap 默认是 BGRA8888 格式
-            var mat = new Mat(info.Height, info.Width, MatType.CV_8UC4, pixels);
+            // SKBitmap 默认是 BGRA8888 格式，使用 FromPixelData 方法
+            var mat = Mat.FromPixelData(info.Height, info.Width, MatType.CV_8UC4, pixels);
             
             // 转换为 BGR（OpenCV 标准格式）
             var bgrMat = new Mat();
