@@ -83,13 +83,14 @@ namespace MMP.States
 
                     if (nearbyBossPos != null)
                     {
-                        Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] 检测到战斗文字但无怪物，导航到预设坐标（距离 {nearbyBossPos.Distance / 100:F1}米）");
-                        await context.NavigateToTargetAsync(nearbyBossPos.Position, 30, false, ct);
-                        return;
+                        Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] 检测到战斗文字但无怪物，调整视角朝向预设坐标（距离 {nearbyBossPos.Distance / 100:F1}米）");
+                        await context.AdjustCameraToTargetAsync(nearbyBossPos.Position, ct);
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] 检测到战斗文字但无怪物，向前移动触发（每500ms检查）");
                     }
 
-                    // 没有预设坐标在范围内，向前移动触发
-                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] 检测到战斗文字但无怪物，向前移动触发（每500ms检查）");
                     context.Controller.SendKeyDown("W");
                     context.Controller.SendKeyDown("LSHIFT");
                     
