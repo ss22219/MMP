@@ -23,7 +23,7 @@ namespace MMP.States
                 (Keywords: new[] { "烛芯", "[烛芯]" }, Name: "烛芯"),
                 (Keywords: new[] { "余烬", "[余烬]" }, Name: "余烬"),
                 (Keywords: new[] { "遗物", "[遗物]" }, Name: "遗物"),
-                (Keywords: new[] { "结束", "炮台轰击", "开始游戏" }, Name: "游戏结束"),
+                (Keywords: new[] { "结束奇遇", "结束", "炮台轰击", "开始游戏" }, Name: "游戏结束"),
                 (Keywords: new[] { "获得" }, Name: "获得")
             };
 
@@ -41,9 +41,9 @@ namespace MMP.States
             }
 
             // 按空格键关闭
-            Console.WriteLine("  → 按空格关闭（长按1.2秒）");
+            Console.WriteLine("  → 按空格关闭（长按2.5秒）");
             context.Controller.SendKeyDown("SPACE");
-            await context.DelayAsync(1200, ct);
+            await context.DelayAsync(2500, ct);
             context.Controller.SendKeyUp("SPACE");
         }
         

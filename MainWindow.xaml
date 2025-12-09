@@ -232,7 +232,7 @@
                                            FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
                                 <TextBox Grid.Row="0" Grid.Column="1" Name="SimpleJumpDistanceTextBox" 
                                          Height="32" Margin="10,8" Classes="modern"/>
-                                <TextBlock Grid.Row="0" Grid.Column="2" Text="15米内用简单跳跃 (默认 1500)" 
+                                <TextBlock Grid.Row="0" Grid.Column="2" Text="13.5米内用简单跳跃 (默认 1350)" 
                                            FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
 
                                 <TextBlock Grid.Row="1" Grid.Column="0" Text="F交互距离:" 

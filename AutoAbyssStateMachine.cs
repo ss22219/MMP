@@ -21,7 +21,6 @@ namespace MMP
             InBattle,                  // 战斗中
             Reviving,                  // 复苏中
             ExploreDetails,            // 探索详情
-            Interacting,               // 交互中
             InteractingFireMechanism,  // 簧火机关交互
             ClosingUI,                 // 关闭UI
             ForceExiting,              // 强制退出深渊
@@ -529,7 +528,6 @@ namespace MMP
                 GameState.InBattle => new InBattleState(),
                 GameState.Reviving => new RevivingState(),
                 GameState.ExploreDetails => new ExploreDetailsState(),
-                GameState.Interacting => new InteractingState(),
                 GameState.InteractingFireMechanism => new InteractingFireMechanismState(),
                 GameState.ClosingUI => new ClosingUIState(),
                 GameState.ForceExiting => new ForceExitingState(),

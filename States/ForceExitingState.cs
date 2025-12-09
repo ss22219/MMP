@@ -25,15 +25,15 @@ namespace MMP.States
                 context.Controller.SendKey("ESCAPE", 0.1);
                 await context.DelayAsync(1000, ct);
 
-                // 点击"放弃"按钮（窗口中心偏下）
-                Console.WriteLine("  → 点击 [退出]");
-                if(!await context.WaitAndClickAsync("退出", 10000, ct)) return;
+                // 点击"暂离"按钮（窗口中心偏下）
+                Console.WriteLine("  → 点击 [暂离]");
+                if(!await context.WaitAndClickAsync("暂离", 10000, ct)) return;
                 await context.DelayAsync(500, ct);
 
-                // 点击确认
-                Console.WriteLine("  → 点击 [确定]");
-                if(!await context.WaitAndClickAsync("确定", 10000, ct)) return;
-                await context.DelayAsync(2000, ct);
+                // // 点击确认
+                // Console.WriteLine("  → 点击 [确定]");
+                // if(!await context.WaitAndClickAsync("确定", 10000, ct)) return;
+                // await context.DelayAsync(2000, ct);
 
                 Console.WriteLine("  ✓ 强制退出完成");
                 
