@@ -64,6 +64,31 @@ namespace MMP.States
 
                 if (monsters.Count == 0)
                 {
+                    // Boss 预设坐标点
+                    var bossPositions = new[]
+                    {
+                        new FVector { X = -502681.5625f, Y = 100717.9688f, Z = 379.8485107f },
+                        new FVector { X = -102672.5859f, Y = 100853.3672f, Z = 379.8485107f },
+                        new FVector { X = 97335.51562f, Y = 100707.3594f, Z = 379.9024963f },
+                        new FVector { X = -202664.625f, Y = 100754.2969f, Z = 379.8484802f }
+                    };
+
+                    // 检查是否有预设坐标在300米范围内
+                    var playerPos = context.BattleApi.GetPlayerLocation();
+                    var nearbyBossPos = bossPositions
+                        .Select(pos => new { Position = pos, Distance = CalculateDistance(playerPos, pos) })
+                        .Where(x => x.Distance <= 30000) // 300米 = 30000单位
+                        .OrderBy(x => x.Distance)
+                        .FirstOrDefault();
+
+                    if (nearbyBossPos != null)
+                    {
+                        Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] 检测到战斗文字但无怪物，导航到预设坐标（距离 {nearbyBossPos.Distance / 100:F1}米）");
+                        await context.NavigateToTargetAsync(nearbyBossPos.Position, 30, false, ct);
+                        return;
+                    }
+
+                    // 没有预设坐标在范围内，向前移动触发
                     Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] 检测到战斗文字但无怪物，向前移动触发（每500ms检查）");
                     context.Controller.SendKeyDown("W");
                     context.Controller.SendKeyDown("LSHIFT");
