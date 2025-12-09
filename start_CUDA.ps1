@@ -57,7 +57,7 @@ Write-Host ""
 # 步骤 1: 检查更新
 Write-Host "步骤 1/5: 检查更新..." -ForegroundColor Yellow
 try {
-    $tags = Invoke-RestMethod -Uri "https://gitee.com/api/v5/repos/gool/MMP/tags" -UseBasicParsing -TimeoutSec 5
+    $tags = Invoke-RestMethod -Uri "https://api.github.com/repos/ss22219/MMP/tags" -UseBasicParsing -TimeoutSec 5
     if ($tags.Count -gt 0) {
         # 找到真正的最新版本（按版本号排序）
         $latestTag = $tags | Sort-Object { 
@@ -99,7 +99,7 @@ try {
                         Write-Host ""
                         Write-Host "正在更新..." -ForegroundColor Yellow
                         git stash 2>$null | Out-Null
-                        git pull https://gitee.com/gool/MMP
+                        git pull https://github.com/ss22219/MMP
                         
                         if ($LASTEXITCODE -eq 0) {
                             git stash pop 2>$null | Out-Null
@@ -115,7 +115,7 @@ try {
                         }
                         else {
                             Write-Host "✗ 更新失败" -ForegroundColor Red
-                            Write-Host "请尝试手动更新: git pull https://gitee.com/gool/MMP" -ForegroundColor Yellow
+                            Write-Host "请尝试手动更新: git pull https://github.com/ss22219/MMP" -ForegroundColor Yellow
                         }
                     }
                     else {
@@ -128,7 +128,7 @@ try {
                         $gitChoice = Read-Host "请输入选项 (1/2)"
                         
                         if ($gitChoice -eq "1") {
-                            Start-Process "https://gitee.com/gool/MMP/releases"
+                            Start-Process "https://github.com/ss22219/MMP/releases"
                             Write-Host "请手动下载最新版本并解压替换" -ForegroundColor Yellow
                             pause
                             exit 0

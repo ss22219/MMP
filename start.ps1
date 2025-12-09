@@ -59,7 +59,7 @@ function Check-Update {
     param([string]$currentVersion)
     
     try {
-        $apiUrl = "https://gitee.com/api/v5/repos/gool/MMP/tags"
+        $apiUrl = "https://api.github.com/repos/ss22219/MMP/tags"
         $tags = Invoke-RestMethod -Uri $apiUrl -UseBasicParsing -TimeoutSec 5
         
         if ($tags.Count -gt 0) {
@@ -124,7 +124,7 @@ function Do-Update {
         git stash 2>$null | Out-Null
         
         Write-Host "正在拉取最新代码..." -ForegroundColor Yellow
-        git pull https://gitee.com/gool/MMP
+        git pull https://github.com/ss22219/MMP
         
         if ($LASTEXITCODE -eq 0) {
             git stash pop 2>$null | Out-Null
@@ -140,7 +140,7 @@ function Do-Update {
         }
         else {
             Write-Host "✗ 更新失败" -ForegroundColor Red
-            Write-Host "请尝试手动更新: git pull https://gitee.com/gool/MMP" -ForegroundColor Yellow
+            Write-Host "请尝试手动更新: git pull https://github.com/ss22219/MMP" -ForegroundColor Yellow
         }
     }
     else {
@@ -154,7 +154,7 @@ function Do-Update {
         $gitChoice = Read-Host "请输入选项 (1/2)"
         
         if ($gitChoice -eq "1") {
-            Start-Process "https://gitee.com/gool/MMP/releases"
+            Start-Process "https://github.com/ss22219/MMP/releases"
             Write-Host "请手动下载最新版本并解压替换" -ForegroundColor Yellow
             Read-Host "按任意键继续"
         }
