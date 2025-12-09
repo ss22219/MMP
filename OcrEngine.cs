@@ -1,3 +1,4 @@
+using System.Text;
 using SkiaSharp;
 using RapidOcrNet;
 
@@ -87,6 +88,23 @@ namespace MMP
                 return;
 
             _ocr = new RapidOcr();
+            
+            // 尝试从嵌入资源直接加载（无需临时文件）
+            var detBytes = EmbeddedResourceHelper.GetModelBytes("ch_PP-OCRv5_mobile_det.onnx");
+            var clsBytes = EmbeddedResourceHelper.GetModelBytes("ch_ppocr_mobile_v2.0_cls_infer.onnx");
+            var recBytes = EmbeddedResourceHelper.GetModelBytes("ch_PP-OCRv5_rec_mobile_infer.onnx");
+            var keysBytes = EmbeddedResourceHelper.GetModelBytes("ppocrv5_dict.txt");
+            
+            if (detBytes != null && clsBytes != null && recBytes != null && keysBytes != null)
+            {
+                Console.WriteLine("[OcrEngine] 从嵌入资源加载模型（无临时文件）");
+                var keysText = Encoding.UTF8.GetString(keysBytes);
+                _ocr.InitModels(detBytes, clsBytes, recBytes, keysText, numThread, _useGpu);
+                return;
+            }
+            
+            // 回退：使用文件路径加载
+            Console.WriteLine("[OcrEngine] 嵌入资源不可用，使用文件路径加载");
             
             // 提取嵌入的模型文件
             EmbeddedResourceHelper.EnsureModelsExtracted();

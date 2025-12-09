@@ -254,14 +254,22 @@ namespace MMP
         }
 
         /// <summary>
-        /// 将 SKBitmap 转换为 OpenCV Mat
+        /// 将 SKBitmap 转换为 OpenCV Mat（直接从像素数据转换，无需编码）
         /// </summary>
         private static Mat SKBitmapToMat(SKBitmap skBitmap)
         {
-            using var image = SKImage.FromBitmap(skBitmap);
-            using var data = image.Encode(SKEncodedImageFormat.Png, 100);
-            byte[] imageBytes = data.ToArray();
-            return Cv2.ImDecode(imageBytes, ImreadModes.Color);
+            // 直接从 SKBitmap 的像素数据创建 Mat，避免 PNG 编码/解码
+            var info = skBitmap.Info;
+            var pixels = skBitmap.GetPixels();
+            
+            // SKBitmap 默认是 BGRA8888 格式
+            var mat = new Mat(info.Height, info.Width, MatType.CV_8UC4, pixels);
+            
+            // 转换为 BGR（OpenCV 标准格式）
+            var bgrMat = new Mat();
+            Cv2.CvtColor(mat, bgrMat, ColorConversionCodes.BGRA2BGR);
+            
+            return bgrMat;
         }
 
         /// <summary>

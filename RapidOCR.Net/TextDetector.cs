@@ -25,6 +25,12 @@ namespace RapidOcrNet
                 throw new FileNotFoundException($"Detector model file does not exist: '{path}'.");
             }
 
+            var modelBytes = File.ReadAllBytes(path);
+            InitModel(modelBytes, numThread, useGpu);
+        }
+
+        public void InitModel(byte[] modelBytes, int numThread, bool useGpu = false)
+        {
             var op = new SessionOptions
             {
                 GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_EXTENDED,
@@ -47,7 +53,7 @@ namespace RapidOcrNet
                 }
             }
 
-            _dbNet = new InferenceSession(path, op);
+            _dbNet = new InferenceSession(modelBytes, op);
             _inputName = _dbNet.InputMetadata.Keys.First();
         }
 

@@ -107,6 +107,38 @@ public static class EmbeddedResourceHelper
     }
 
     /// <summary>
+    /// 直接从嵌入资源读取模型文件的字节数组（无需临时文件）
+    /// </summary>
+    public static byte[]? GetModelBytes(string fileName)
+    {
+        var assembly = Assembly.GetExecutingAssembly();
+        var resourceName = assembly.GetManifestResourceNames()
+            .FirstOrDefault(r => r.EndsWith($".models.{fileName}"));
+
+        if (resourceName == null)
+        {
+            Console.WriteLine($"[资源读取] 警告: 找不到嵌入资源 {fileName}");
+            return null;
+        }
+
+        try
+        {
+            using var stream = assembly.GetManifestResourceStream(resourceName);
+            if (stream == null)
+                return null;
+
+            using var memoryStream = new MemoryStream();
+            stream.CopyTo(memoryStream);
+            return memoryStream.ToArray();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[资源读取] 读取 {fileName} 失败: {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>
     /// 清理临时模型文件
     /// </summary>
     public static void CleanupTempModels()

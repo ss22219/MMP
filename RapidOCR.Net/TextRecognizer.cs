@@ -33,6 +33,13 @@ namespace RapidOcrNet
                 throw new FileNotFoundException($"Recognizer keys file does not exist: '{keysPath}'.");
             }
 
+            var modelBytes = File.ReadAllBytes(path);
+            var keysText = File.ReadAllText(keysPath, Encoding.UTF8);
+            InitModel(modelBytes, keysText, numThread, useGpu);
+        }
+
+        public void InitModel(byte[] modelBytes, string keysText, int numThread, bool useGpu = false)
+        {
             var op = new SessionOptions
             {
                 GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_EXTENDED,
@@ -55,14 +62,14 @@ namespace RapidOcrNet
                 }
             }
 
-            _crnnNet = new InferenceSession(path, op);
+            _crnnNet = new InferenceSession(modelBytes, op);
             _inputName = _crnnNet.InputMetadata.Keys.First();
-            _keys = InitKeys(keysPath);
+            _keys = InitKeys(keysText);
         }
 
-        private static string[] InitKeys(string path)
+        private static string[] InitKeys(string keysText)
         {
-            using (var sr = new StreamReader(path, Encoding.UTF8))
+            using (var sr = new StringReader(keysText))
             {
                 List<string> keys = ["#"];
 

@@ -36,6 +36,13 @@ namespace RapidOcrNet
             _textRecognizer.InitModel(recPath, keysPath, numThread, useGpu);
         }
 
+        public void InitModels(byte[] detBytes, byte[] clsBytes, byte[] recBytes, string keysText, int numThread, bool useGpu = false)
+        {
+            _textDetector.InitModel(detBytes, numThread, useGpu);
+            _textClassifier.InitModel(clsBytes, numThread, useGpu);
+            _textRecognizer.InitModel(recBytes, keysText, numThread, useGpu);
+        }
+
         public OcrResult Detect(string img, RapidOcrOptions options)
         {
             if (!File.Exists(img))

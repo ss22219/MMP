@@ -27,6 +27,12 @@ namespace RapidOcrNet
                 throw new FileNotFoundException($"Classifier model file does not exist: '{path}'.");
             }
 
+            var modelBytes = File.ReadAllBytes(path);
+            InitModel(modelBytes, numThread, useGpu);
+        }
+
+        public void InitModel(byte[] modelBytes, int numThread, bool useGpu = false)
+        {
             var op = new SessionOptions
             {
                 GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_EXTENDED,
@@ -49,7 +55,7 @@ namespace RapidOcrNet
                 }
             }
 
-            _angleNet = new InferenceSession(path, op);
+            _angleNet = new InferenceSession(modelBytes, op);
             _inputName = _angleNet.InputMetadata.Keys.First();
         }
 
