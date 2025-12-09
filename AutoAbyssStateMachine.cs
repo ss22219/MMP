@@ -412,6 +412,16 @@ namespace MMP
             // 设置 OCR 完成回调
             _ocrCompletedCallback = (ocr) =>
             {
+                // 检查状态超时（ForceExiting 状态不检查超时）
+                if (CurrentState != GameState.ForceExiting &&
+                    (DateTime.Now - _stateStartTime).TotalSeconds > _config.Timeouts.StateTimeout)
+                {
+                    Console.WriteLine($"⚠ 状态超时 ({CurrentState})，强制退出深渊");
+                    _nextState = GameState.ForceExiting;
+                    _currentStateCts?.Cancel();
+                    return;
+                }
+
                 var newState = StateDecider(ocr, CurrentState);
                 if (newState != null && newState != CurrentState)
                 {

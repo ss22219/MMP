@@ -147,10 +147,13 @@ namespace MMP.States
 
             Controller.Move(winWidth / 2, winHeight / 2);
             await Task.Delay(50, ct);
-
+            
             for (int i = 0; i < 20; i++)
             {
                 var camLoc = BattleApi.GetCameraLocation();
+                var distance = CalculateDistance(camLoc, targetPos);
+                if(distance >  30000)
+                    return moveCount;
                 var camRot = BattleApi.GetCameraRotation();
                 var tarRot = CalculateRotationToTarget(camLoc, targetPos);
 
@@ -476,12 +479,12 @@ namespace MMP.States
                     }
 
 
-                    // 每1秒检查位置是否改变
+                    // 每2秒检查位置是否改变
                     if ((DateTime.Now - lastPositionCheckTime).TotalSeconds > POSITION_CHECK_SECONDS)
                     {
                         var currentPlayerLoc = BattleApi.GetPlayerLocation();
                         float positionChange = CalculateDistance(lastPosition, currentPlayerLoc);
-                        if (positionChange < 100)
+                        if (positionChange < 150)
                         {
                             Console.WriteLine($"  ⚠ {POSITION_CHECK_SECONDS}秒位置未改变（变化 {positionChange / 100:F1}米），执行二段跳");
                             await PerformDoubleJumpAsync(targetPos, needInteract, ct);
