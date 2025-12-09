@@ -202,9 +202,9 @@ namespace MMP
     public class MovementConfig
     {
         /// <summary>
-        /// 简单跳跃距离阈值（游戏单位，默认 1500 = 15米）
+        /// 简单跳跃距离阈值（游戏单位，默认 1350 = 13.5米）
         /// </summary>
-        public float SimpleJumpDistance { get; set; } = 1500;
+        public float SimpleJumpDistance { get; set; } = 1350;
 
         /// <summary>
         /// 需要交互时的距离（游戏单位，默认 350 = 3.5米）
