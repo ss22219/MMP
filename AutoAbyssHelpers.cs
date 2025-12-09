@@ -9,76 +9,7 @@ namespace MMP
     /// </summary>
     public partial class AutoAbyssStateMachine
     {
-        // 当前等待的取消令牌源
-        private CancellationTokenSource? _currentWaitCts;
-        /// <summary>
-        /// 延时等待 - 使用事件驱动，OCR 完成后自动检查是否需要中断
-        /// </summary>
-        /// <param name="milliseconds">最大等待时长（毫秒）</param>
-        /// <param name="allowStateChange">是否允许状态改变时中断（默认 true）</param>
-        /// <returns>检测到的新状态，如果超时或不允许状态改变则返回 null</returns>
-        private async Task<GameState?> DelayAsync(int milliseconds, bool allowStateChange = true)
-        {
-            var startTime = DateTime.Now;
-            var currentState = CurrentState;
-            GameState? detectedState = null;
 
-            // 创建取消令牌
-            _currentWaitCts = new CancellationTokenSource();
-            var ct = _currentWaitCts.Token;
-
-            // 如果允许状态改变，订阅 OCR 完成事件
-            Action<OcrEngine.OcrResult>? ocrHandler = null;
-            if (allowStateChange)
-            {
-                ocrHandler = (ocrResult) =>
-                {
-                    // OCR 完成后，调用状态决策器
-                    var newState = StateDecider(ocrResult, currentState);
-
-                    // 如果检测到状态变化，取消等待
-                    if (newState != null && newState != currentState)
-                    {
-                        var elapsed = (DateTime.Now - startTime).TotalMilliseconds;
-                        Console.WriteLine($"  [延时中断] OCR 检测到 {currentState} → {newState}（已等待 {elapsed:F0}ms）");
-                        detectedState = newState;
-                        _currentWaitCts?.Cancel();
-                    }
-                };
-
-                OnOcrCompleted += ocrHandler;
-            }
-
-            try
-            {
-                // 直接 await Task.Delay，简洁！
-                await Task.Delay(milliseconds, ct);
-                return detectedState;
-            }
-            catch (TaskCanceledException)
-            {
-                // 被取消，返回检测到的状态
-                return detectedState;
-            }
-            finally
-            {
-                // 清理
-                if (ocrHandler != null)
-                {
-                    OnOcrCompleted -= ocrHandler;
-                }
-                _currentWaitCts?.Dispose();
-                _currentWaitCts = null;
-            }
-        }
-
-        /// <summary>
-        /// 同步版本的 Delay（用于不支持 async 的地方）
-        /// </summary>
-        private GameState? Delay(int milliseconds, bool allowStateChange = true)
-        {
-            return DelayAsync(milliseconds, allowStateChange).GetAwaiter().GetResult();
-        }
 
         /// <summary>
         /// 状态决策器 - 根据 OCR 结果和游戏数据，决定应该转换到哪个状态

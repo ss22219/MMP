@@ -28,8 +28,7 @@ namespace MMP
             Error                      // 错误状态
         }
 
-        private GameState _currentState = GameState.MainMenu;
-        private readonly object _stateLock = new object();
+        private volatile GameState _currentState = GameState.MainMenu;
 
         // OCR 线程相关
         private Thread? _ocrThread;
@@ -37,8 +36,8 @@ namespace MMP
         private OcrEngine.OcrResult? _latestOcrResult = null;
         private readonly object _ocrResultLock = new object();
 
-        // OCR 完成事件（只定义一次）
-        private event Action<OcrEngine.OcrResult>? OnOcrCompleted;
+        // OCR 完成回调
+        private Action<OcrEngine.OcrResult>? _ocrCompletedCallback;
 
         // 防AFK线程相关
         private Thread? _antiAfkThread;
@@ -63,8 +62,8 @@ namespace MMP
 
         public GameState CurrentState
         {
-            get { lock (_stateLock) { return _currentState; } }
-            private set { lock (_stateLock) { _currentState = value; } }
+            get { return _currentState; }
+            private set { _currentState = value; }
         }
 
         /// <summary>
@@ -95,7 +94,6 @@ namespace MMP
             Console.WriteLine("[状态机] 正在停止...");
             _shouldStop = true;
             _currentStateCts?.Cancel();
-            _currentWaitCts?.Cancel();
         }
 
 
@@ -155,9 +153,7 @@ namespace MMP
                 _controller,
                 _battleApi,
                 _config,
-                GetLatestOcrResult,
-                handler => OnOcrCompleted += handler,
-                handler => OnOcrCompleted -= handler
+                GetLatestOcrResult
             );
             Console.WriteLine("✓ 状态上下文初始化完成");
             Console.WriteLine();
@@ -206,8 +202,15 @@ namespace MMP
                                     _latestOcrResult = result;
                                 }
 
-                                // 触发 OCR 完成事件
-                                OnOcrCompleted?.Invoke(result);
+                                // 触发 OCR 完成回调（在锁外调用，避免死锁）
+                                try
+                                {
+                                    _ocrCompletedCallback?.Invoke(result);
+                                }
+                                catch (Exception callbackEx)
+                                {
+                                    Console.WriteLine($"[OCR线程] 回调错误: {callbackEx.Message}");
+                                }
                             }
                         }
 
@@ -252,8 +255,6 @@ namespace MMP
                 POINT lastPos = new POINT();
                 GetCursorPos(out lastPos);
                 int idleSeconds = 0;
-                int moveCount = 0;
-                int keyPressCount = 0;
 
                 // 随机按键池（Z, 1, 2, 3, 5）
                 string[] randomKeys = { "Z", "1", "2", "3", "5" };
@@ -297,7 +298,6 @@ namespace MMP
 
                                 // 移动鼠标
                                 SetCursorPos(newX, newY);
-                                moveCount++;
 
                                 // 验证移动
                                 Thread.Sleep(50);
@@ -343,11 +343,9 @@ namespace MMP
                                     // 随机间隔 (100-500ms)
                                     int interval = random.Next(100, 501);
                                     Thread.Sleep(interval);
-
-                                    keyPressCount++;
                                 }
 
-                                Console.WriteLine($"[防AFK] 发送随机按键: {string.Join(", ", selectedKeys)} (总计: {keyPressCount})");
+                                Console.WriteLine($"[防AFK] 发送随机按键: {string.Join(", ", selectedKeys)}");
 
                                 // 重置计时器，从配置读取下次间隔
                                 keyPressTimer = 0;
@@ -365,7 +363,7 @@ namespace MMP
                     }
                 }
 
-                Console.WriteLine($"[防AFK线程] 停止 - 鼠标移动: {moveCount} 次, 按键: {keyPressCount} 次");
+                Console.WriteLine("[防AFK线程] 停止");
             })
             {
                 IsBackground = true,
@@ -411,8 +409,22 @@ namespace MMP
         {
             Console.WriteLine("=== 主循环启动 ===");
 
+            // 设置 OCR 完成回调
+            _ocrCompletedCallback = (ocr) =>
+            {
+                var newState = StateDecider(ocr, CurrentState);
+                if (newState != null && newState != CurrentState)
+                {
+                    var allText = string.Join(", ", ocr.Regions.Select(r => r.Text).Take(5));
+                    Console.WriteLine($"  [状态中断] OCR 检测到 {CurrentState} → {newState}");
+                    Console.WriteLine($"  [OCR文字] {allText}...");
+                    _nextState = newState;
+                    _currentStateCts?.Cancel();
+                }
+            };
             while (!_shouldStop)
             {
+                ct.ThrowIfCancellationRequested();
                 try
                 {
                     // 激活窗口（仅在前台模式需要）
@@ -434,26 +446,6 @@ namespace MMP
                     _currentStateCts = new CancellationTokenSource();
                     _nextState = null;
 
-                    // 【临时禁用】订阅 OCR 事件，检测状态变化
-                    // 让状态有机会完整执行，避免被立即中断
-                    Action<OcrEngine.OcrResult>? stateChangeHandler = null;
-
-
-                    stateChangeHandler = (ocr) =>
-                    {
-                        var newState = StateDecider(ocr, CurrentState);
-                        if (newState != null && newState != CurrentState)
-                        {
-                            var allText = string.Join(", ", ocr.Regions.Select(r => r.Text).Take(5));
-                            Console.WriteLine($"  [状态中断] OCR 检测到 {CurrentState} → {newState}");
-                            Console.WriteLine($"  [OCR文字] {allText}...");
-                            _nextState = newState;
-                            _currentStateCts?.Cancel();
-                        }
-                    };
-                    OnOcrCompleted += stateChangeHandler;
-
-
                     // 根据当前状态执行对应逻辑
                     IStateHandler? currentHandler = null;
                     try
@@ -466,6 +458,8 @@ namespace MMP
                     }
                     catch (OperationCanceledException)
                     {
+                        if(ct.IsCancellationRequested)
+                            return;
                         // 状态被中断，调用清理
                         if (currentHandler != null && _stateContext != null)
                             currentHandler.Cleanup(_stateContext);
@@ -476,9 +470,6 @@ namespace MMP
                     }
                     finally
                     {
-                        // 清理
-                        if (stateChangeHandler != null)
-                            OnOcrCompleted -= stateChangeHandler;
                         _currentStateCts?.Dispose();
                         _currentStateCts = null;
                     }
@@ -579,23 +570,5 @@ namespace MMP
             _controller?.Dispose();
             Console.WriteLine("✓ 清理完成");
         }
-    }
-
-    public class SingleThreadSyncContext : SynchronizationContext
-    {
-        private readonly BlockingCollection<(SendOrPostCallback, object?)> _queue = new();
-
-        public void RunOnCurrentThread()
-        {
-            foreach (var workItem in _queue.GetConsumingEnumerable())
-                workItem.Item1(workItem.Item2);
-        }
-
-        public override void Post(SendOrPostCallback d, object? state)
-        {
-            _queue.Add((d, state));
-        }
-
-        public void Complete() => _queue.CompleteAdding();
     }
 }

@@ -17,25 +17,19 @@ namespace MMP.States
 
         // OCR 相关
         private readonly Func<OcrEngine.OcrResult?> _getLatestOcrResult;
-        private readonly Action<Action<OcrEngine.OcrResult>> _subscribeOcrEvent;
-        private readonly Action<Action<OcrEngine.OcrResult>> _unsubscribeOcrEvent;
 
         public StateContext(
             IntPtr windowHandle,
             KeyboardMouseController? controller,
             BattleEntitiesAPI? battleApi,
             AppConfig config,
-            Func<OcrEngine.OcrResult?> getLatestOcrResult,
-            Action<Action<OcrEngine.OcrResult>> subscribeOcrEvent,
-            Action<Action<OcrEngine.OcrResult>> unsubscribeOcrEvent)
+            Func<OcrEngine.OcrResult?> getLatestOcrResult)
         {
             WindowHandle = windowHandle;
             Controller = controller;
             BattleApi = battleApi;
             Config = config;
             _getLatestOcrResult = getLatestOcrResult;
-            _subscribeOcrEvent = subscribeOcrEvent;
-            _unsubscribeOcrEvent = unsubscribeOcrEvent;
         }
 
         /// <summary>

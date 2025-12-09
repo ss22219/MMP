@@ -16,14 +16,30 @@ public partial class MainWindow : Window
 {
     private readonly AppConfig _config;
     private AutoAbyssStateMachine? _stateMachine;
-    private Thread? _hotkeyThread;
-    private volatile bool _shouldStopHotkey = false;
     private CancellationTokenSource? _runningCts;
     private CancellationToken? _stopingToken;
 
-    // Windows API for hotkey detection
-    [LibraryImport("user32.dll")]
-    private static partial short GetAsyncKeyState(int vKey);
+    // Windows API for global keyboard hook
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn, IntPtr hMod, uint dwThreadId);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool UnhookWindowsHookEx(IntPtr hhk);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+    private static extern IntPtr GetModuleHandle(string? lpModuleName);
+
+    private const int WH_KEYBOARD_LL = 13;
+    private const int WM_KEYDOWN = 0x0100;
+    private const int WM_SYSKEYDOWN = 0x0104;
+
+    private delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
+    private LowLevelKeyboardProc? _hookCallback;
+    private IntPtr _hookId = IntPtr.Zero;
 
     // UI Controls
     private Button StartButton = null!;
@@ -32,7 +48,6 @@ public partial class MainWindow : Window
     private TextBlock InfoText = null!;
     private TextBox LogTextBox = null!;
     private TextBox ForceExitHotkeyTextBox = null!;
-    private TextBox ForceExitAbyssHotkeyTextBox = null!;
     private TextBox StateTimeoutTextBox = null!;
     private TextBox MonsterDetectionRangeTextBox = null!;
     private TextBox ApproachDistanceTextBox = null!;
@@ -76,8 +91,8 @@ public partial class MainWindow : Window
         // 重定向控制台输出到日志窗口
         Console.SetOut(new TextBoxWriter(LogTextBox));
 
-        // 启动热键监听
-        StartHotkeyMonitor();
+        // 启动热键监听（延迟到窗口加载完成后）
+        this.Opened += (s, e) => StartHotkeyMonitor();
     }
 
     private void InitializeComponent()
@@ -93,7 +108,6 @@ public partial class MainWindow : Window
         InfoText = this.FindControl<TextBlock>("InfoText")!;
         LogTextBox = this.FindControl<TextBox>("LogTextBox")!;
         ForceExitHotkeyTextBox = this.FindControl<TextBox>("ForceExitHotkeyTextBox")!;
-        ForceExitAbyssHotkeyTextBox = this.FindControl<TextBox>("ForceExitAbyssHotkeyTextBox")!;
         StateTimeoutTextBox = this.FindControl<TextBox>("StateTimeoutTextBox")!;
         MonsterDetectionRangeTextBox = this.FindControl<TextBox>("MonsterDetectionRangeTextBox")!;
         ApproachDistanceTextBox = this.FindControl<TextBox>("ApproachDistanceTextBox")!;
@@ -135,77 +149,63 @@ public partial class MainWindow : Window
 
     private void StartHotkeyMonitor()
     {
-        _hotkeyThread = new Thread(() =>
+        try
         {
-            Console.WriteLine($"[热键监听] 已启动 - {_config.Hotkeys.ForceExit}: 启动/停止, {_config.Hotkeys.ForceExitAbyss}: 强制退出深渊");
+            Console.WriteLine($"[全局热键] 正在启动 - {_config.Hotkeys.ForceExit}: 启动/停止");
 
-            bool lastStopState = false;
-            bool lastForceExitAbyssState = false;
-
-            while (!_shouldStopHotkey)
+            _hookCallback = HookCallback;
+            var curProcess = System.Diagnostics.Process.GetCurrentProcess();
+            var curModule = curProcess.MainModule;
+            if (curModule != null)
             {
-                try
+                _hookId = SetWindowsHookEx(WH_KEYBOARD_LL, _hookCallback, GetModuleHandle(curModule.ModuleName), 0);
+                if (_hookId == IntPtr.Zero)
                 {
-                    // 获取配置的热键对应的虚拟键码
-                    int stopKey = GetVirtualKeyCode(_config.Hotkeys.ForceExit);
-                    int forceExitAbyssKey = GetVirtualKeyCode(_config.Hotkeys.ForceExitAbyss);
-
-                    bool currentStopState = (GetAsyncKeyState(stopKey) & 0x8000) != 0;
-                    bool currentForceExitAbyssState = (GetAsyncKeyState(forceExitAbyssKey) & 0x8000) != 0;
-
-                    // F10: 启动/停止切换
-                    if (currentStopState && !lastStopState)
-                    {
-                        Dispatcher.UIThread.Post(async () =>
-                        {
-                            if (_stateMachine != null)
-                            {
-                                StopButton_Click(null, null);
-                            }
-                            else
-                            {
-                                await StartButton_Click(null, null);
-                            }
-                        });
-                    }
-
-                    // 强制退出深渊
-                    if (currentForceExitAbyssState && !lastForceExitAbyssState)
-                    {
-                        Dispatcher.UIThread.Post(() =>
-                        {
-                            Console.WriteLine($"\n[{_config.Hotkeys.ForceExitAbyss}] 强制退出深渊");
-                            if (_stateMachine != null)
-                            {
-                                // 触发强制退出深渊逻辑
-                                Task.Run(() => _stateMachine.Stop());
-                            }
-                            else
-                            {
-                                Console.WriteLine("程序未在运行");
-                            }
-                        });
-                    }
-
-                    lastStopState = currentStopState;
-                    lastForceExitAbyssState = currentForceExitAbyssState;
+                    int error = Marshal.GetLastWin32Error();
+                    Console.WriteLine($"[全局热键] 警告: 启用失败 (错误代码: {error})");
                 }
-                catch (Exception ex)
+                else
                 {
-                    Console.WriteLine($"[热键监听] 错误: {ex.Message}");
+                    Console.WriteLine("[全局热键] ✓ 启用成功");
                 }
-
-                Thread.Sleep(50);
             }
-
-            Console.WriteLine("[热键监听] 已停止");
-        })
+            else
+            {
+                Console.WriteLine("[全局热键] 警告: 无法获取主模块");
+            }
+        }
+        catch (Exception ex)
         {
-            IsBackground = true,
-            Name = "Hotkey Monitor Thread"
-        };
+            Console.WriteLine($"[全局热键] 错误: {ex.Message}");
+        }
+    }
 
-        _hotkeyThread.Start();
+    private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
+    {
+        if (nCode >= 0 && (wParam == (IntPtr)WM_KEYDOWN || wParam == (IntPtr)WM_SYSKEYDOWN))
+        {
+            int vkCode = Marshal.ReadInt32(lParam);
+
+            int stopKey = GetVirtualKeyCode(_config.Hotkeys.ForceExit);
+
+            // 启动/停止切换
+            if (vkCode == stopKey)
+            {
+                Dispatcher.UIThread.Post(async () =>
+                {
+                    if (_stateMachine != null)
+                    {
+                        StopButton_Click(null, null);
+                    }
+                    else
+                    {
+                        await StartButton_Click(null, null);
+                    }
+                });
+            }
+        }
+
+        return CallNextHookEx(_hookId, nCode, wParam, lParam);
     }
 
     private static int GetVirtualKeyCode(string keyName)
@@ -233,7 +233,6 @@ public partial class MainWindow : Window
     {
         // 加载热键配置
         ForceExitHotkeyTextBox.Text = _config.Hotkeys.ForceExit;
-        ForceExitAbyssHotkeyTextBox.Text = _config.Hotkeys.ForceExitAbyss;
 
         // 加载超时配置
         StateTimeoutTextBox.Text = _config.Timeouts.StateTimeout.ToString();
@@ -274,7 +273,6 @@ public partial class MainWindow : Window
 
         // 设置热键输入框的键盘事件
         ForceExitHotkeyTextBox.KeyDown += HotkeyTextBox_KeyDown;
-        ForceExitAbyssHotkeyTextBox.KeyDown += HotkeyTextBox_KeyDown;
     }
 
     private void HotkeyTextBox_KeyDown(object? sender, KeyEventArgs e)
@@ -292,7 +290,6 @@ public partial class MainWindow : Window
         {
             // 保存热键配置
             _config.Hotkeys.ForceExit = ForceExitHotkeyTextBox.Text ?? "F10";
-            _config.Hotkeys.ForceExitAbyss = ForceExitAbyssHotkeyTextBox.Text ?? "F11";
 
             // 保存超时配置
             _config.Timeouts.StateTimeout = int.Parse(StateTimeoutTextBox.Text ?? "60");
@@ -473,28 +470,24 @@ public partial class MainWindow : Window
 
     private async void StopButton_Click(object? sender, RoutedEventArgs? e)
     {
-        if (_stateMachine != null)
-        {
-            StopButton.IsEnabled = false;
-            Console.WriteLine("正在停止程序...");
-            InfoText.Text = "正在停止...";
-
-            _stateMachine.Stop();
-            if (_runningCts != null)
-                await _runningCts.CancelAsync();
-            if (_stopingToken != null)
-                try
-                {
-                    await Task.Delay(10000, _stopingToken.Value);
-                }
-                catch { }
-            _stateMachine = null;
-            StartButton.IsEnabled = true;
-            StopButton.IsEnabled = false;
-            StatusText.Text = "已停止";
-            InfoText.Text = "程序已停止";
-            Console.WriteLine("程序已停止");
-        }
+        StopButton.IsEnabled = false;
+        Console.WriteLine("正在停止程序...");
+        InfoText.Text = "正在停止...";
+        _stateMachine?.Stop();
+        if (_runningCts != null)
+            await _runningCts.CancelAsync();
+        if (_stopingToken != null)
+            try
+            {
+                await Task.Delay(10000, _stopingToken.Value);
+            }
+            catch { }
+        _stateMachine = null;
+        StartButton.IsEnabled = true;
+        StopButton.IsEnabled = false;
+        StatusText.Text = "已停止";
+        InfoText.Text = "程序已停止";
+        Console.WriteLine("程序已停止");
     }
 
     private void ClearLogButton_Click(object? sender, RoutedEventArgs e)
@@ -504,9 +497,15 @@ public partial class MainWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
-        _shouldStopHotkey = true;
+        // 卸载全局Hook
+        if (_hookId != IntPtr.Zero)
+        {
+            UnhookWindowsHookEx(_hookId);
+            _hookId = IntPtr.Zero;
+            Console.WriteLine("[全局热键] 已卸载");
+        }
+
         _stateMachine?.Stop();
-        _hotkeyThread?.Join(1000);
         base.OnClosed(e);
     }
 }

@@ -4,5 +4,19 @@
              RequestedThemeVariant="Light">
     <Application.Styles>
         <FluentTheme />
+        
+        <!-- 右键菜单中文化 -->
+        <Style Selector="TextBox">
+            <Setter Property="ContextFlyout">
+                <MenuFlyout>
+                    <MenuItem Header="剪切" Command="{Binding $parent[TextBox].Cut}" 
+                              InputGesture="Ctrl+X" />
+                    <MenuItem Header="复制" Command="{Binding $parent[TextBox].Copy}" 
+                              InputGesture="Ctrl+C" />
+                    <MenuItem Header="粘贴" Command="{Binding $parent[TextBox].Paste}" 
+                              InputGesture="Ctrl+V" />
+                </MenuFlyout>
+            </Setter>
+        </Style>
     </Application.Styles>
 </Application>

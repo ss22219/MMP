@@ -98,11 +98,6 @@ namespace MMP
         /// 启动/停止运行热键（默认 F10）
         /// </summary>
         public string ForceExit { get; set; } = "F10";
-
-        /// <summary>
-        /// 强制退出深渊热键（默认 F12）
-        /// </summary>
-        public string ForceExitAbyss { get; set; } = "F12";
     }
 
     /// <summary>
