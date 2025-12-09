@@ -108,13 +108,13 @@ namespace RapidOcrNet
                 inputTensors = OcrUtils.SubtractMeanNormalize(srcResize, MeanValues, NormValues);
             }
 
-            IReadOnlyCollection<NamedOnnxValue> inputs = new NamedOnnxValue[]
-            {
-                NamedOnnxValue.CreateFromTensor(_inputName, inputTensors)
-            };
-
             try
             {
+                IReadOnlyCollection<NamedOnnxValue> inputs = new NamedOnnxValue[]
+                {
+                    NamedOnnxValue.CreateFromTensor(_inputName, inputTensors)
+                };
+
                 using (IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results = _crnnNet.Run(inputs))
                 {
                     var result = results[0];
@@ -129,10 +129,16 @@ namespace RapidOcrNet
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine(ex.Message + ex.StackTrace);
-                //throw ex;
+                return new TextLine() { Time = sw.ElapsedMilliseconds };
             }
-
-            return new TextLine() { Time = sw.ElapsedMilliseconds };
+            finally
+            {
+                // 释放 Tensor 内存
+                if (inputTensors is IDisposable disposable)
+                {
+                    disposable.Dispose();
+                }
+            }
         }
 
         private TextLine ScoreToTextLine(ReadOnlySpan<float> srcData, int h, int w)

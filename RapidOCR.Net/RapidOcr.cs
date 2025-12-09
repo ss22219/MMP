@@ -120,7 +120,9 @@ namespace RapidOcrNet
             {
                 if (angles[i].Index == 1)
                 {
-                    partImages[i] = OcrUtils.BitmapRotateClockWise180(partImages[i]);
+                    var oldBitmap = partImages[i];
+                    partImages[i] = OcrUtils.BitmapRotateClockWise180(oldBitmap);
+                    oldBitmap.Dispose(); // 释放旧的 bitmap，防止内存泄漏
                 }
             }
 

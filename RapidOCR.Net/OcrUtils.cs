@@ -228,7 +228,9 @@ namespace RapidOcrNet
             {
                 if (imgCrop.Height >= imgCrop.Width * 1.5)
                 {
-                    return BitmapRotateClockWise90(imgCrop);
+                    var rotated = BitmapRotateClockWise90(imgCrop);
+                    imgCrop.Dispose(); // 释放原始裁剪图像
+                    return rotated;
                 }
 
                 return imgCrop;
@@ -250,6 +252,8 @@ namespace RapidOcrNet
                 canvas.Restore();
             }
 
+            imgCrop.Dispose(); // 释放原始裁剪图像，防止内存泄漏
+
             //#if DEBUG
             //            using (var fs = new FileStream($"perspective_{Guid.NewGuid()}.png", FileMode.Create))
             //            {
@@ -259,7 +263,9 @@ namespace RapidOcrNet
 
             if (partImg.Height >= partImg.Width * 1.5)
             {
-                return BitmapRotateClockWise90(partImg);
+                var rotated = BitmapRotateClockWise90(partImg);
+                partImg.Dispose(); // 释放旋转前的图像
+                return rotated;
             }
 
             return partImg;

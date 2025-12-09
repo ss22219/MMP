@@ -69,13 +69,13 @@ namespace RapidOcrNet
                 inputTensors = OcrUtils.SubtractMeanNormalize(srcResize, MeanValues, NormValues);
             }
 
-            IReadOnlyCollection<NamedOnnxValue> inputs = new NamedOnnxValue[]
-            {
-                NamedOnnxValue.CreateFromTensor(_inputName, inputTensors)
-            };
-
             try
             {
+                IReadOnlyCollection<NamedOnnxValue> inputs = new NamedOnnxValue[]
+                {
+                    NamedOnnxValue.CreateFromTensor(_inputName, inputTensors)
+                };
+
                 using (IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results = _dbNet.Run(inputs))
                 {
                     return GetTextBoxes(results[0], scale.DstHeight, scale.DstWidth, scale, boxScoreThresh,
@@ -85,9 +85,16 @@ namespace RapidOcrNet
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine(ex.Message + ex.StackTrace);
+                return null;
             }
-
-            return null;
+            finally
+            {
+                // 释放 Tensor 内存
+                if (inputTensors is IDisposable disposable)
+                {
+                    disposable.Dispose();
+                }
+            }
         }
 
         private static SKPoint[][] FindContours(byte[] array, int rows, int cols)

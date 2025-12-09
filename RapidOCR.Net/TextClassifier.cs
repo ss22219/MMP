@@ -107,13 +107,13 @@ namespace RapidOcrNet
                 inputTensors = OcrUtils.SubtractMeanNormalize(angleImg, _meanValues, _normValues);
             }
 
-            IReadOnlyCollection<NamedOnnxValue> inputs = new NamedOnnxValue[]
-            {
-                NamedOnnxValue.CreateFromTensor(_inputName, inputTensors)
-            };
-
             try
             {
+                IReadOnlyCollection<NamedOnnxValue> inputs = new NamedOnnxValue[]
+                {
+                    NamedOnnxValue.CreateFromTensor(_inputName, inputTensors)
+                };
+
                 using (IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results = _angleNet.Run(inputs))
                 {
                     ReadOnlySpan<float> outputData = results[0].AsEnumerable<float>().ToArray();
@@ -125,10 +125,16 @@ namespace RapidOcrNet
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine(ex.Message + ex.StackTrace);
-                //throw;
+                return new Angle() { Time = sw.ElapsedMilliseconds };
             }
-
-            return new Angle() { Time = sw.ElapsedMilliseconds };
+            finally
+            {
+                // 释放 Tensor 内存
+                if (inputTensors is IDisposable disposable)
+                {
+                    disposable.Dispose();
+                }
+            }
         }
 
         private static Angle ScoreToAngle(ReadOnlySpan<float> srcData, int angleColumns)
