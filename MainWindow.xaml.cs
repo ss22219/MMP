@@ -511,7 +511,7 @@ public partial class MainWindow : Window
 }
 
 /// <summary>
-/// 将控制台输出重定向到 TextBox（优化版本，防止界面卡顿）
+/// 将控制台输出重定向到 TextBox（高性能版本，防止界面卡顿）
 /// </summary>
 public class TextBoxWriter : System.IO.TextWriter
 {
@@ -519,9 +519,10 @@ public class TextBoxWriter : System.IO.TextWriter
     private readonly System.Text.StringBuilder _buffer = new();
     private readonly System.Threading.Timer _flushTimer;
     private readonly object _lock = new();
-    private const int MAX_LOG_LENGTH = 50000; // 最大日志长度
-    private const int TRIM_TO_LENGTH = 30000; // 裁剪到的长度
+    private const int MAX_LOG_LENGTH = 30000; // 降低最大长度
+    private const int MAX_LINES = 100; // 最大行数
     private DateTime _lastFlushTime = DateTime.MinValue;
+    private int _skipCount = 0; // 跳过的日志计数
 
     public TextBoxWriter(TextBox textBox)
     {
@@ -577,34 +578,53 @@ public class TextBoxWriter : System.IO.TextWriter
             try
             {
                 var currentText = _textBox.Text ?? "";
-                var newText = currentText + text;
-
-                // 如果日志太长，裁剪旧内容
+                var currentLines = currentText.Split('\n');
+                var newLines = text.Split('\n');
+                
+                // 合并行
+                var allLines = currentLines.Concat(newLines).ToList();
+                
+                // 如果行数过多，只保留最新的行
+                if (allLines.Count > MAX_LINES)
+                {
+                    _skipCount += allLines.Count - MAX_LINES;
+                    allLines = allLines.TakeLast(MAX_LINES).ToList();
+                    
+                    // 添加跳过提示
+                    if (_skipCount > 0)
+                    {
+                        allLines.Insert(0, $"[已跳过 {_skipCount} 行日志] ...");
+                    }
+                }
+                
+                var newText = string.Join('\n', allLines);
+                
+                // 最后检查总长度
                 if (newText.Length > MAX_LOG_LENGTH)
                 {
                     var lines = newText.Split('\n');
-                    var keepLines = lines.TakeLast(200).ToArray(); // 保留最后200行
-                    newText = string.Join('\n', keepLines);
-                    
-                    // 添加裁剪提示
-                    if (!newText.StartsWith("[日志已裁剪]"))
-                    {
-                        newText = "[日志已裁剪] ...\n" + newText;
-                    }
+                    var keepLines = lines.TakeLast(MAX_LINES / 2).ToArray();
+                    newText = $"[日志过长，已裁剪] ...\n{string.Join('\n', keepLines)}";
                 }
 
                 _textBox.Text = newText;
                 
-                // 滚动到底部（降低频率）
-                if (_textBox.Text != null)
-                {
-                    _textBox.CaretIndex = _textBox.Text.Length;
-                }
+                // 简化滚动逻辑
+                _textBox.CaretIndex = _textBox.Text.Length;
             }
             catch (Exception ex)
             {
-                // 避免日志更新错误导致程序崩溃
+                // 如果更新失败，清空日志重新开始
                 System.Diagnostics.Debug.WriteLine($"日志更新错误: {ex.Message}");
+                try
+                {
+                    _textBox.Text = $"[日志重置] {DateTime.Now:HH:mm:ss}\n{text}";
+                    _skipCount = 0;
+                }
+                catch
+                {
+                    // 完全失败时什么都不做
+                }
             }
         });
     }
