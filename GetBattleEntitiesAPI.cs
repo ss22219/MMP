@@ -110,6 +110,21 @@ public class EntityInfo
     }
 }
 
+public class BattlePointInfo
+{
+    public int PointId;
+    public IntPtr PointPtr;
+    public string Name = "";
+    public string ClassName = "";
+    public FVector Position;
+    public List<string> ParentClasses = new List<string>();
+
+    public override string ToString()
+    {
+        return $"[BattlePoint] {Name} ({ClassName}) ID:{PointId} 位置:{Position}";
+    }
+}
+
 public class ComponentInfo
 {
     public string Name = "";
@@ -164,6 +179,7 @@ public class BattleEntitiesAPI
     // Battle 相关偏移
     // ============================================================================
     const int OFFSET_BATTLE_ENTITIES = 0x380;   // Battle->Entities (TMap)
+    const int OFFSET_BATTLE_POINTS = 0x940;     // Battle->BattlePoints (TMap)
 
     // ============================================================================
     // 游戏特定状态偏移
@@ -934,6 +950,90 @@ public class BattleEntitiesAPI
         return npcs;
     }
 
+    // 主API：获取 Battle.BattlePoints
+    public List<BattlePointInfo> GetBattlePoints()
+    {
+        List<BattlePointInfo> battlePoints = new List<BattlePointInfo>();
+
+        try
+        {
+            IntPtr battle = GetBattle();
+            if (battle == IntPtr.Zero)
+            {
+                Console.WriteLine("⚠ 无法获取 Battle 对象");
+                return battlePoints;
+            }
+
+            // 读取 Battle.BattlePoints TMap
+            IntPtr battlePointsMapAddr = new IntPtr(battle.ToInt64() + OFFSET_BATTLE_POINTS);
+            TMapData mapData = ReadStruct<TMapData>(battlePointsMapAddr);
+
+            Console.WriteLine($"✓ BattlePoints 数量: {mapData.ArrayNum}");
+
+            if (mapData.ArrayNum <= 0 || !IsValidPointer(mapData.Data))
+            {
+                Console.WriteLine("⚠ BattlePoints 为空");
+                return battlePoints;
+            }
+
+            int elementSize = 24; // TSetElement size
+
+            for (int i = 0; i < mapData.ArrayNum && i < 100; i++) // 限制最多100个
+            {
+                IntPtr elementAddr = new IntPtr(mapData.Data.ToInt64() + i * elementSize);
+
+                try
+                {
+                    // 检查 HashIndex 判断槽位是否有效
+                    int hashIndex = ReadInt32(new IntPtr(elementAddr.ToInt64() + 20));
+                    if (hashIndex == -1)
+                        continue;
+
+                    int key = ReadInt32(elementAddr);
+                    IntPtr value = ReadPointer(new IntPtr(elementAddr.ToInt64() + 8));
+
+                    if (!IsValidPointer(value))
+                        continue;
+
+                    // 读取对象信息
+                    string objectName = ReadFName(value);
+                    if (string.IsNullOrEmpty(objectName) || objectName == "Invalid" || objectName == "")
+                        continue;
+
+                    IntPtr classPtr = ReadPointer(new IntPtr(value.ToInt64() + UOBJECT_CLASS));
+                    string className = IsValidPointer(classPtr) ? ReadFName(classPtr) : "Unknown";
+
+                    // 获取类继承链
+                    List<string> hierarchy = GetClassHierarchy(classPtr);
+
+                    // 创建战斗点信息
+                    BattlePointInfo battlePoint = new BattlePointInfo
+                    {
+                        PointId = key,
+                        PointPtr = value,
+                        Name = objectName,
+                        ClassName = className,
+                        ParentClasses = hierarchy,
+                        Position = GetActorPosition(value) // ABattlePoint 继承自 AActor
+                    };
+
+                    battlePoints.Add(battlePoint);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"  ⚠ 读取 BattlePoint {i} 失败: {ex.Message}");
+                }
+            }
+
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ 获取 BattlePoints 错误: {ex.Message}");
+        }
+
+        return battlePoints;
+    }
+
     // 打印实体信息
     public void PrintEntities(List<EntityInfo> entities)
     {
@@ -966,6 +1066,85 @@ public class BattleEntitiesAPI
                 Console.WriteLine($"\n[{entity.EntityId}] {entity.Name} ({entity.ClassName})");
                 Console.WriteLine($"  地址: 0x{entity.EntityPtr.ToInt64():X}");
                 Console.WriteLine($"  继承链: {string.Join(" -> ", entity.ParentClasses)}");
+            }
+        }
+    }
+
+    // 打印战斗点信息
+    public void PrintBattlePoints(List<BattlePointInfo> battlePoints)
+    {
+        Console.WriteLine("\n╔════════════════════════════════════════════════════════════════╗");
+        Console.WriteLine($"║  Battle.BattlePoints ({battlePoints.Count} 个战斗点)");
+        Console.WriteLine("╚════════════════════════════════════════════════════════════════╝\n");
+
+        if (battlePoints.Count == 0)
+        {
+            Console.WriteLine("  (无战斗点)");
+            return;
+        }
+
+        // 按类型分组
+        var bossBattlePoints = battlePoints.Where(bp => bp.Name.Contains("Boss")).ToList();
+        var playerBattlePoints = battlePoints.Where(bp => bp.Name.Contains("Player")).ToList();
+        var skillBattlePoints = battlePoints.Where(bp => bp.Name.Contains("Skill")).ToList();
+        var otherBattlePoints = battlePoints.Where(bp => 
+            !bp.Name.Contains("Boss") && 
+            !bp.Name.Contains("Player") && 
+            !bp.Name.Contains("Skill")).ToList();
+
+        if (bossBattlePoints.Count > 0)
+        {
+            Console.WriteLine($"【Boss 战斗点】 ({bossBattlePoints.Count} 个)");
+            Console.WriteLine(new string('-', 80));
+            foreach (var bp in bossBattlePoints)
+            {
+                Console.WriteLine($"[{bp.PointId}] {bp.Name} ({bp.ClassName})");
+                Console.WriteLine($"  地址: 0x{bp.PointPtr.ToInt64():X}");
+                Console.WriteLine($"  位置: {bp.Position}");
+                Console.WriteLine($"  继承链: {string.Join(" -> ", bp.ParentClasses)}");
+                Console.WriteLine();
+            }
+        }
+
+        if (playerBattlePoints.Count > 0)
+        {
+            Console.WriteLine($"【Player 战斗点】 ({playerBattlePoints.Count} 个)");
+            Console.WriteLine(new string('-', 80));
+            foreach (var bp in playerBattlePoints)
+            {
+                Console.WriteLine($"[{bp.PointId}] {bp.Name} ({bp.ClassName})");
+                Console.WriteLine($"  地址: 0x{bp.PointPtr.ToInt64():X}");
+                Console.WriteLine($"  位置: {bp.Position}");
+                Console.WriteLine($"  继承链: {string.Join(" -> ", bp.ParentClasses)}");
+                Console.WriteLine();
+            }
+        }
+
+        if (skillBattlePoints.Count > 0)
+        {
+            Console.WriteLine($"【Skill 战斗点】 ({skillBattlePoints.Count} 个)");
+            Console.WriteLine(new string('-', 80));
+            foreach (var bp in skillBattlePoints)
+            {
+                Console.WriteLine($"[{bp.PointId}] {bp.Name} ({bp.ClassName})");
+                Console.WriteLine($"  地址: 0x{bp.PointPtr.ToInt64():X}");
+                Console.WriteLine($"  位置: {bp.Position}");
+                Console.WriteLine($"  继承链: {string.Join(" -> ", bp.ParentClasses)}");
+                Console.WriteLine();
+            }
+        }
+
+        if (otherBattlePoints.Count > 0)
+        {
+            Console.WriteLine($"【其他战斗点】 ({otherBattlePoints.Count} 个)");
+            Console.WriteLine(new string('-', 80));
+            foreach (var bp in otherBattlePoints)
+            {
+                Console.WriteLine($"[{bp.PointId}] {bp.Name} ({bp.ClassName})");
+                Console.WriteLine($"  地址: 0x{bp.PointPtr.ToInt64():X}");
+                Console.WriteLine($"  位置: {bp.Position}");
+                Console.WriteLine($"  继承链: {string.Join(" -> ", bp.ParentClasses)}");
+                Console.WriteLine();
             }
         }
     }
