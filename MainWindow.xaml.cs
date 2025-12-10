@@ -519,7 +519,7 @@ public class TextBoxWriter : System.IO.TextWriter
     private readonly System.Text.StringBuilder _buffer = new();
     private readonly System.Threading.Timer _flushTimer;
     private readonly object _lock = new();
-    private const int MAX_LOG_LENGTH = 30000; // 降低最大长度
+    private const int MAX_LOG_LENGTH = 300; // 降低最大长度
     private const int MAX_LINES = 100; // 最大行数
     private DateTime _lastFlushTime = DateTime.MinValue;
     private int _skipCount = 0; // 跳过的日志计数
