@@ -116,12 +116,14 @@ public class BattlePointInfo
     public IntPtr PointPtr;
     public string Name = "";
     public string ClassName = "";
+    public bool IsActor;
     public FVector Position;
     public List<string> ParentClasses = new List<string>();
 
     public override string ToString()
     {
-        return $"[BattlePoint] {Name} ({ClassName}) ID:{PointId} 位置:{Position}";
+        string actorType = IsActor ? "[Actor BattlePoint]" : "[BattlePoint]";
+        return $"{actorType} {Name} ({ClassName}) ID:{PointId} 位置:{Position}";
     }
 }
 
@@ -1005,6 +1007,14 @@ public class BattleEntitiesAPI
 
                     // 获取类继承链
                     List<string> hierarchy = GetClassHierarchy(classPtr);
+                    bool isActor = IsActorClass(hierarchy);
+
+                    // 只处理 Actor 类型的 BattlePoint
+                    if (!isActor)
+                    {
+                        Console.WriteLine($"  ⚠ 跳过非Actor BattlePoint: {objectName} ({className})");
+                        continue;
+                    }
 
                     // 创建战斗点信息
                     BattlePointInfo battlePoint = new BattlePointInfo
@@ -1013,6 +1023,7 @@ public class BattleEntitiesAPI
                         PointPtr = value,
                         Name = objectName,
                         ClassName = className,
+                        IsActor = isActor,
                         ParentClasses = hierarchy,
                         Position = GetActorPosition(value) // ABattlePoint 继承自 AActor
                     };
