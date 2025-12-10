@@ -39,7 +39,13 @@ namespace MMP.States
                     break;
                 }
             }
-
+            for (int i = 0; i < 3; i++)
+            {
+                context.Controller.SendKeyDown("SPACE");
+                await context.DelayAsync(100, ct);
+                context.Controller.SendKeyUp("SPACE");
+            }
+            await context.DelayAsync(100, ct);
             // 按空格键关闭
             Console.WriteLine("  → 按空格关闭（长按2.5秒）");
             context.Controller.SendKeyDown("SPACE");

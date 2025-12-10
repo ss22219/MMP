@@ -456,7 +456,6 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "提示:"
 Write-Host "  - 按 F10 启动/停止程序"
-Write-Host "  - 按 F12 强制退出深渊"
 Write-Host "  - 使用 CUDA 加速进行 OCR 识别"
 Write-Host ""
 Write-Host "⚠ 注意: 如果切换到普通版本，请先删除 bin 和 obj 文件夹" -ForegroundColor Yellow
