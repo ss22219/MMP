@@ -125,7 +125,7 @@ namespace MMP
             // 创建 OCR 实例
             _ocr = new PaddleOcrAll(model, deviceConfig)
             {
-                AllowRotateDetection = true,
+                AllowRotateDetection = false,  // 禁用旋转检测以提升速度
                 Enable180Classification = false
             };
         }
@@ -254,7 +254,7 @@ namespace MMP
         }
 
         /// <summary>
-        /// 将 SKBitmap 转换为 OpenCV Mat（直接从像素数据转换，无需编码）
+        /// 将 SKBitmap 转换为 OpenCV Mat（高性能版本）
         /// </summary>
         private static Mat SKBitmapToMat(SKBitmap skBitmap)
         {
@@ -262,14 +262,25 @@ namespace MMP
             var info = skBitmap.Info;
             var pixels = skBitmap.GetPixels();
             
-            // SKBitmap 默认是 BGRA8888 格式，使用 FromPixelData 方法
-            var mat = Mat.FromPixelData(info.Height, info.Width, MatType.CV_8UC4, pixels);
-            
-            // 转换为 BGR（OpenCV 标准格式）
-            var bgrMat = new Mat();
-            Cv2.CvtColor(mat, bgrMat, ColorConversionCodes.BGRA2BGR);
-            
-            return bgrMat;
+            // 尝试直接使用 RGB 格式，避免颜色转换
+            if (info.ColorType == SKColorType.Bgra8888)
+            {
+                // 创建 BGRA Mat
+                using var bgraMat = Mat.FromPixelData(info.Height, info.Width, MatType.CV_8UC4, pixels);
+                
+                // 只转换为 BGR，去掉 Alpha 通道
+                var bgrMat = new Mat();
+                Cv2.CvtColor(bgraMat, bgrMat, ColorConversionCodes.BGRA2BGR);
+                return bgrMat;
+            }
+            else
+            {
+                // 其他格式回退到原来的方法
+                using var image = SKImage.FromBitmap(skBitmap);
+                using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+                byte[] imageBytes = data.ToArray();
+                return Cv2.ImDecode(imageBytes, ImreadModes.Color);
+            }
         }
 
         /// <summary>

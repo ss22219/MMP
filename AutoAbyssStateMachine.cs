@@ -184,24 +184,34 @@ namespace MMP
                         }
 
                         // 记录本次 OCR 开始时间
-                        lastOcrTime = DateTime.Now;
+                        var ocrStartTime = DateTime.Now;
+                        lastOcrTime = ocrStartTime;
 
                         // 使用 CaptureWindow 捕获游戏画面（已自动裁剪客户区）
+                        var captureStart = DateTime.Now;
                         using var screenshot = ScreenCapture.CaptureWindow(_hwnd);
+                        var captureTime = (DateTime.Now - captureStart).TotalMilliseconds;
+                        
                         if (screenshot != null && _ocrEngine != null)
                         {
                             ocrCount++;
 
+                            var recognizeStart = DateTime.Now;
                             var result = _ocrEngine.Recognize(screenshot);
+                            var recognizeTime = (DateTime.Now - recognizeStart).TotalMilliseconds;
+                            
                             if (result != null && result.Regions != null)
                             {
                                 // 更新最新的 OCR 结果（线程安全）
+                                var lockStart = DateTime.Now;
                                 lock (_ocrResultLock)
                                 {
                                     _latestOcrResult = result;
                                 }
+                                var lockTime = (DateTime.Now - lockStart).TotalMilliseconds;
 
                                 // 触发 OCR 完成回调（在锁外调用，避免死锁）
+                                var callbackStart = DateTime.Now;
                                 try
                                 {
                                     _ocrCompletedCallback?.Invoke(result);
@@ -210,14 +220,19 @@ namespace MMP
                                 {
                                     Console.WriteLine($"[OCR线程] 回调错误: {callbackEx.Message}");
                                 }
+                                var callbackTime = (DateTime.Now - callbackStart).TotalMilliseconds;
+                                
+                                // 详细性能分析
+                                var totalDuration = (DateTime.Now - ocrStartTime).TotalMilliseconds;
+                                if (totalDuration > ocrIntervalMs * 2)
+                                {
+                                    Console.WriteLine($"[OCR线程] 性能警告: 总耗时 {totalDuration:F0}ms > {ocrIntervalMs * 2}ms");
+                                    Console.WriteLine($"  - 截图: {captureTime:F1}ms");
+                                    Console.WriteLine($"  - 识别: {recognizeTime:F1}ms");
+                                    Console.WriteLine($"  - 锁定: {lockTime:F1}ms");
+                                    Console.WriteLine($"  - 回调: {callbackTime:F1}ms");
+                                }
                             }
-                        }
-
-                        // 计算本次 OCR 耗时（可选：用于监控性能）
-                        var ocrDuration = (DateTime.Now - lastOcrTime).TotalMilliseconds;
-                        if (ocrDuration > ocrIntervalMs * 2)
-                        {
-                            Console.WriteLine($"[OCR线程] 警告: OCR 耗时 {ocrDuration:F0}ms，超过间隔时间");
                         }
                     }
                     catch (Exception ex)
