@@ -511,7 +511,7 @@ public partial class MainWindow : Window
 }
 
 /// <summary>
-/// 将控制台输出重定向到 TextBox
+/// 将控制台输出重定向到 TextBox（优化版本，防止界面卡顿）
 /// </summary>
 public class TextBoxWriter : System.IO.TextWriter
 {
@@ -519,12 +519,15 @@ public class TextBoxWriter : System.IO.TextWriter
     private readonly System.Text.StringBuilder _buffer = new();
     private readonly System.Threading.Timer _flushTimer;
     private readonly object _lock = new();
+    private const int MAX_LOG_LENGTH = 50000; // 最大日志长度
+    private const int TRIM_TO_LENGTH = 30000; // 裁剪到的长度
+    private DateTime _lastFlushTime = DateTime.MinValue;
 
     public TextBoxWriter(TextBox textBox)
     {
         _textBox = textBox;
-        // 每 100ms 刷新一次缓冲区
-        _flushTimer = new System.Threading.Timer(_ => Flush(), null, 100, 100);
+        // 每 500ms 刷新一次缓冲区（降低频率）
+        _flushTimer = new System.Threading.Timer(_ => Flush(), null, 500, 500);
     }
 
     public override System.Text.Encoding Encoding => System.Text.Encoding.UTF8;
@@ -563,11 +566,46 @@ public class TextBoxWriter : System.IO.TextWriter
             _buffer.Clear();
         }
 
+        // 限制刷新频率，避免过于频繁的UI更新
+        var now = DateTime.Now;
+        if ((now - _lastFlushTime).TotalMilliseconds < 200)
+            return;
+        _lastFlushTime = now;
+
         Dispatcher.UIThread.Post(() =>
         {
-            _textBox.Text += text;
-            // Avalonia 中的滚动到底部
-            _textBox.CaretIndex = _textBox.Text?.Length ?? 0;
+            try
+            {
+                var currentText = _textBox.Text ?? "";
+                var newText = currentText + text;
+
+                // 如果日志太长，裁剪旧内容
+                if (newText.Length > MAX_LOG_LENGTH)
+                {
+                    var lines = newText.Split('\n');
+                    var keepLines = lines.TakeLast(200).ToArray(); // 保留最后200行
+                    newText = string.Join('\n', keepLines);
+                    
+                    // 添加裁剪提示
+                    if (!newText.StartsWith("[日志已裁剪]"))
+                    {
+                        newText = "[日志已裁剪] ...\n" + newText;
+                    }
+                }
+
+                _textBox.Text = newText;
+                
+                // 滚动到底部（降低频率）
+                if (_textBox.Text != null)
+                {
+                    _textBox.CaretIndex = _textBox.Text.Length;
+                }
+            }
+            catch (Exception ex)
+            {
+                // 避免日志更新错误导致程序崩溃
+                System.Diagnostics.Debug.WriteLine($"日志更新错误: {ex.Message}");
+            }
         });
     }
 
