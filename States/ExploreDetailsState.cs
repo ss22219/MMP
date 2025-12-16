@@ -56,22 +56,22 @@ namespace MMP.States
                 Console.WriteLine($"  → 长按尝试{_longPressAttempts}次未退出，执行滑动操作");
                 var (winWidth, winHeight) = WindowHelper.GetWindowSize(context.WindowHandle);
                 
-                // 从窗口x：1/3，从下往上快速点击到y：1/2处，每次移动20%
-                int clickX = winWidth / 3;
+                // 从窗口x：2/3，从下往上快速点击到y：1/2处，每次移动20%
+                int clickX = winWidth * 2 / 3;
                 int startY = winHeight - 50;  // 底部留一点边距
                 int endY = winHeight / 2;  // 中间
                 int totalDistance = startY - endY;
                 int steps = 5;  // 5步，每步20%
                 int stepDistance = totalDistance / steps;
                 
-                Console.WriteLine($"  → 快速点击操作：从({clickX}, {startY})向上点击到({clickX}, {endY})");
+                Console.WriteLine($"  → 快速点击操作：从窗口2/3位置({clickX}, {startY})向上点击到({clickX}, {endY})");
                 
                 for (int i = 0; i <= steps; i++)
                 {
                     int currentY = startY - (stepDistance * i);
                     Console.WriteLine($"    点击位置: ({clickX}, {currentY})");
                     context.Controller.Click(clickX, currentY);
-                    await context.DelayAsync(100, ct);  // 每次点击间隔100ms
+                    await context.DelayAsync(50, ct);  // 每次点击间隔100ms
                 }
                 
                 await context.DelayAsync(500, ct);
