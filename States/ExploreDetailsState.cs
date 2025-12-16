@@ -10,6 +10,7 @@ namespace MMP.States
     /// </summary>
     public class ExploreDetailsState : IStateHandler
     {
+        private int _longPressAttempts = 0;
         public async Task ExecuteAsync(StateContext context, OcrEngine.OcrResult? ocrResult, CancellationToken ct)
         {
             if (ocrResult == null || context.Controller == null)
@@ -46,27 +47,67 @@ namespace MMP.States
                 context.Controller.SendKeyUp("SPACE");
             }
             await context.DelayAsync(100, ct);
-            // 查找并点击"长按"文字
-            var longPressText = ocrResult.Regions.FirstOrDefault(r => r.Text.Contains("长按"));
-            if (longPressText != null)
+            // 增加长按尝试次数
+            _longPressAttempts++;
+            
+            // 如果已经尝试了4次长按，执行滑动操作
+            if (_longPressAttempts >= 4)
             {
-                Console.WriteLine("  → 点击并长按 [长按] 文字（2.5秒）");
-                context.Controller.MouseDown((int)longPressText.Center.X, (int)longPressText.Center.Y, "left");
-                await context.DelayAsync(2500, ct);
-                context.Controller.MouseUp((int)longPressText.Center.X, (int)longPressText.Center.Y, "left");
+                Console.WriteLine($"  → 长按尝试{_longPressAttempts}次未退出，执行滑动操作");
+                var (winWidth, winHeight) = WindowHelper.GetWindowSize(context.WindowHandle);
+                
+                // 从窗口x：1/3，从下往上快速点击到y：1/2处，每次移动20%
+                int clickX = winWidth / 3;
+                int startY = winHeight - 50;  // 底部留一点边距
+                int endY = winHeight / 2;  // 中间
+                int totalDistance = startY - endY;
+                int steps = 5;  // 5步，每步20%
+                int stepDistance = totalDistance / steps;
+                
+                Console.WriteLine($"  → 快速点击操作：从({clickX}, {startY})向上点击到({clickX}, {endY})");
+                
+                for (int i = 0; i <= steps; i++)
+                {
+                    int currentY = startY - (stepDistance * i);
+                    Console.WriteLine($"    点击位置: ({clickX}, {currentY})");
+                    context.Controller.Click(clickX, currentY);
+                    await context.DelayAsync(100, ct);  // 每次点击间隔100ms
+                }
+                
+                await context.DelayAsync(500, ct);
+                
+                // 重置计数器
+                _longPressAttempts = 0;
             }
             else
             {
-                Console.WriteLine("  → 未找到 [长按] 文字，使用空格键关闭");
-                context.Controller.SendKeyDown("SPACE");
-                await context.DelayAsync(2500, ct);
-                context.Controller.SendKeyUp("SPACE");
+                // 查找并点击"长按"文字
+                var longPressText = ocrResult.Regions.FirstOrDefault(r => r.Text.Contains("长按"));
+                if (longPressText != null)
+                {
+                    Console.WriteLine($"  → 点击并长按 [长按] 文字（2.5秒）- 尝试 {_longPressAttempts}/4");
+                    context.Controller.MouseDown((int)longPressText.Center.X, (int)longPressText.Center.Y, "left");
+                    await context.DelayAsync(2500, ct);
+                    context.Controller.MouseUp((int)longPressText.Center.X, (int)longPressText.Center.Y, "left");
+                }
+                else
+                {
+                    Console.WriteLine($"  → 未找到 [长按] 文字，使用空格键关闭 - 尝试 {_longPressAttempts}/4");
+                    context.Controller.SendKeyDown("SPACE");
+                    await context.DelayAsync(2500, ct);
+                    context.Controller.SendKeyUp("SPACE");
+                }
             }
         }
         
         public void Cleanup(StateContext context)
         {
-            // 无需清理
+            // 重置长按尝试计数器
+            if (_longPressAttempts > 0)
+            {
+                Console.WriteLine($"  [清理] 重置长按尝试计数器 ({_longPressAttempts} → 0)");
+                _longPressAttempts = 0;
+            }
         }
     }
 }
