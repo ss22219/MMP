@@ -27,6 +27,16 @@ namespace MMP.States
                 r.Text.Contains("坠入深渊") || r.Text.Contains("探索详情")))
             {
                 Console.WriteLine("  ⚠ 检测到主界面，退出战斗");
+                context.RequestReturnToMainMenu("战斗结束，检测到主界面");
+                return;
+            }
+
+            // 检查是否需要复苏
+            if (ocrResult != null && ocrResult.Regions.Any(r =>
+                r.Text.Contains("复苏") || r.Text.Contains("重生")))
+            {
+                Console.WriteLine("  ⚠ 检测到复苏界面");
+                context.RequestReviving("角色死亡，需要复苏");
                 return;
             }
 
@@ -36,7 +46,7 @@ namespace MMP.States
                 var entities = context.BattleApi.GetBattleEntities();
                 var cameraLoc = context.BattleApi.GetCameraLocation();
 
-                // 过滤有效怪物
+                // 过滤有效怪物（使用统一的检测范围）
                 var monsters = entities.Where(e =>
                 {
                     if (!e.IsActor || !(e.ClassName.StartsWith("BP_Mon_") || e.ClassName.StartsWith("BP_Boss_")))
@@ -50,7 +60,7 @@ namespace MMP.States
                     if (string.IsNullOrEmpty(e.Name) || e.Name == "None")
                         return false;
 
-                    // 检测范围内
+                    // 检测范围内（使用统一的怪物检测范围）
                     float distance = CalculateDistance(cameraLoc, e.Position);
                     if (distance > context.Config.Battle.MonsterDetectionRange)
                         return false;
@@ -101,12 +111,12 @@ namespace MMP.States
                     context.Controller.SendKeyDown("W");
                     context.Controller.SendKeyDown("LSHIFT");
                     
-                    // 最多移动3秒，每500ms检查一次
-                    for (int i = 0; i < 6; i++)
+                    // 最多移动3秒，每1000ms检查一次
+                    for (int i = 0; i < 3; i++)
                     {
-                        await context.DelayAsync(500, ct);
+                        await context.DelayAsync(1000, ct);
                         
-                        // 每次检查是否有怪物出现
+                        // 每次检查是否有怪物出现（Boss 和普通怪物使用不同范围）
                         var checkEntities = context.BattleApi.GetBattleEntities();
                         var checkMonsters = checkEntities.Where(e =>
                         {
@@ -118,7 +128,9 @@ namespace MMP.States
                                 return false;
                             if (e.AlreadyDead)
                                 return false;
+                            
                             float distance = CalculateDistance(cameraLoc, e.Position);
+                            // 使用统一的怪物检测范围
                             return distance <= context.Config.Battle.MonsterDetectionRange;
                         }).ToList();
                         
@@ -139,10 +151,18 @@ namespace MMP.States
                 var nearestMonster = monsters.OrderBy(m => CalculateDistance(cameraLoc, m.Position)).First();
                 float targetDistance = CalculateDistance(cameraLoc, nearestMonster.Position);
                 
-                Console.WriteLine($"  → 目标: {nearestMonster.Name} 距离: {targetDistance / 100:F1}米");
+                // 判断是否为 Boss 并使用对应的靠近距离
+                bool isBoss = nearestMonster.ClassName.StartsWith("BP_Boss_") || 
+                             nearestMonster.Name.Contains("Boss") || 
+                             nearestMonster.ParentClasses.Any(c => c.Contains("Boss"));
+                
+                string targetType = isBoss ? "Boss" : "怪物";
+                float approachDistance = isBoss ? context.Config.Battle.BossApproachDistance : context.Config.Battle.ApproachDistance;
+                
+                Console.WriteLine($"  → 目标: {nearestMonster.Name} ({targetType}) 距离: {targetDistance / 100:F1}米 [靠近距离: {approachDistance / 100:F0}米]");
 
                 // 如果怪物距离太远，先移动靠近
-                if (targetDistance > context.Config.Battle.ApproachDistance)
+                if (targetDistance > approachDistance)
                 {
                     string monsterKey = $"{nearestMonster.Name}_{nearestMonster.EntityId}";
 
@@ -153,9 +173,9 @@ namespace MMP.States
 
                     if (_monsterStuckCount[monsterKey] >= 3)
                     {
-                        Console.WriteLine($"  ⚠ 怪物被卡住3次，点击右上角");
-                        var (winWidth, winHeight) = WindowHelper.GetWindowSize(context.WindowHandle);
-                        context.Controller.Click(winWidth - 70, 50);
+                        _monsterStuckCount.Clear();
+                        Console.WriteLine($"  ⚠ 怪物被卡住3次");
+                        context.RequestForceExit("怪物被卡住3次");
                         return;
                     }
 
@@ -186,6 +206,9 @@ namespace MMP.States
                 await Task.Delay(50, ct);
 
                 // 调整视角对准怪物
+                context.BattleApi.RefreshEntityPosition(nearestMonster);
+                if(nearestMonster.AlreadyDead)
+                    return;
                 await context.AdjustCameraToTargetAsync(nearestMonster.Position, ct);
 
                 // 技能使用逻辑：Q 后按间隔释放 E 技能
@@ -221,6 +244,10 @@ namespace MMP.States
                 // 攻击
                 for (int i = 0; i < config.AttackCount; i++)
                 {
+                    context.BattleApi.RefreshEntityPosition(nearestMonster);
+                    if(nearestMonster.AlreadyDead)
+                        return;
+                    await context.AdjustCameraToTargetAsync(nearestMonster.Position, ct);
                     context.Controller.MouseDown(-1, -1, "right");
                     await Task.Delay(config.AttackInterval, ct);
                     context.Controller.MouseUp(-1, -1, "right");
