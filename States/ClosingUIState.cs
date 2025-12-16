@@ -53,7 +53,7 @@ namespace MMP.States
                     await context.DelayAsync(1500, ct);
                 // 点击右上角关闭
                 var (winWidth, winHeight) = WindowHelper.GetWindowSize(context.WindowHandle);
-                context.Controller.Click(winWidth - 70, 50);
+                context.Controller.Click(winWidth - 10, 10);
 
                 await context.DelayAsync(500, ct);
 
