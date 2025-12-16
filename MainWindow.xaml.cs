@@ -318,7 +318,7 @@ public partial class MainWindow : Window
             _config.Movement.SimpleJumpDistance = float.Parse(SimpleJumpDistanceTextBox.Text ?? "500");
             _config.Movement.InteractDistance = float.Parse(InteractDistanceTextBox.Text ?? "350");
             _config.Movement.NormalMoveDistance = float.Parse(NormalMoveDistanceTextBox.Text ?? "600");
-            _config.Movement.SprintDistance = float.Parse(SprintDistanceTextBox.Text ?? "2000");
+            _config.Movement.SprintDistance = float.Parse(SprintDistanceTextBox.Text ?? "1000");
             _config.Movement.TooFarWarningDistance = float.Parse(TooFarDistanceTextBox.Text ?? "20000");
             _config.Movement.HeightDiffJumpThreshold = float.Parse(HeightDiffJumpThresholdTextBox.Text ?? "50");
 

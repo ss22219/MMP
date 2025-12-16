@@ -253,7 +253,7 @@
                                            FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
                                 <TextBox Grid.Row="3" Grid.Column="1" Name="SprintDistanceTextBox" 
                                          Height="32" Margin="10,8" Classes="modern"/>
-                                <TextBlock Grid.Row="3" Grid.Column="2" Text="20米以上用冲刺 (默认 2000)" 
+                                <TextBlock Grid.Row="3" Grid.Column="2" Text="10米以上用冲刺 (默认 1000)" 
                                            FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
 
                                 <TextBlock Grid.Row="4" Grid.Column="0" Text="距离过远警告:" 

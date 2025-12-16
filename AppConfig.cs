@@ -218,9 +218,9 @@ namespace MMP
         public float NormalMoveDistance { get; set; } = 1000;
 
         /// <summary>
-        /// 冲刺距离阈值（游戏单位，默认 3000 = 30米）
+        /// 冲刺距离阈值（游戏单位，默认 1000 = 10米）
         /// </summary>
-        public float SprintDistance { get; set; } = 3000;
+        public float SprintDistance { get; set; } = 1000;
 
         /// <summary>
         /// 距离过远警告阈值（游戏单位，默认 20000 = 200米）
