@@ -30,14 +30,21 @@ jobs:
       id: get_tag_message
       shell: bash
       run: |
-        TAG_MESSAGE=$(git tag -l --format='%(contents)' "${{ steps.get_tag.outputs.tag_name }}" | head -n 20)
+        # 获取完整的tag消息，包括多行内容
+        TAG_MESSAGE=$(git tag -l --format='%(contents)' "${{ steps.get_tag.outputs.tag_name }}")
         if [ -z "$TAG_MESSAGE" ]; then
           TAG_MESSAGE="Release ${{ steps.get_tag.outputs.tag_name }}"
         fi
+        # 处理特殊字符，保持多行格式
         TAG_MESSAGE="${TAG_MESSAGE//'%'/'%25'}"
         TAG_MESSAGE="${TAG_MESSAGE//$'\n'/'%0A'}"
         TAG_MESSAGE="${TAG_MESSAGE//$'\r'/'%0D'}"
-        echo "tag_message=$TAG_MESSAGE" >> $GITHUB_OUTPUT
+        # 使用EOF方式处理多行内容
+        {
+          echo 'tag_message<<EOF'
+          echo "$TAG_MESSAGE"
+          echo 'EOF'
+        } >> $GITHUB_OUTPUT
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
