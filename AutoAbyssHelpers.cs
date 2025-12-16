@@ -25,7 +25,6 @@ namespace MMP
             // 检测主菜单特征
             bool hasMainMenu = ocrResult.Regions.Any(r =>
                 r.Text.Contains("坠入深渊") ||
-                r.Text.Contains("沉潜深度") ||
                 r.Text.Contains("构造之域") ||
                 r.Text.Contains("乐土之国"));
             if (hasMainMenu)

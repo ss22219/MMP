@@ -11,8 +11,6 @@
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
-    <SelfContained>false</SelfContained>
-    <PublishSingleFile>false</PublishSingleFile>
     <NoWarn>$(NoWarn);CA1416;CS8602;CS8604</NoWarn>
   </PropertyGroup>
 
