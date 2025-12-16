@@ -1,0 +1,105 @@
+# .github/workflows/manual-release.yml
+name: Manual AOT Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号 (格式: v1.2.3)'
+        required: true
+        default: 'v1.0.0'
+      description:
+        description: '发布说明'
+        required: false
+        default: '手动构建版本'
+      environment:
+        description: '目标环境'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+          
+env:
+  DOTNET_VERSION: '10.0.x'
+  PROJECT_NAME: 'MMP'
+  
+jobs:
+  manual-release:
+    runs-on: windows-latest
+    environment: ${{ github.event.inputs.environment }}
+    permissions:
+      contents: write
+      
+    steps:
+    - name: Display inputs
+      run: |
+        echo "版本号: ${{ github.event.inputs.version }}"
+        echo "环境: ${{ github.event.inputs.environment }}"
+        echo "说明: ${{ github.event.inputs.description }}"
+        echo "触发者: ${{ github.actor }}"
+        
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: main  # 或指定其他分支
+        
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Build with AOT
+      run: |
+        dotnet publish .\MMP.csproj `
+          -r win-x64 `
+          -c Release `
+          --self-contained true `
+          -p:PublishSingleFile=true `
+          -p:PublishTrimmed=true `
+          -p:PublishAot=true `
+          -o ./publish
+          
+    - name: Create 7z package
+      shell: pwsh
+      run: |
+        $version = "${{ github.event.inputs.version }}"
+        $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+        $archiveName = "${{ env.PROJECT_NAME }}-$version-$timestamp-win-x64.7z"
+        
+        7z a -t7z -mx=9 "$archiveName" "./publish/*"
+        
+        # 生成校验文件
+        (Get-FileHash "$archiveName" -Algorithm SHA256).Hash | Out-File "$archiveName.sha256"
+        
+    - name: Upload to GitHub Releases
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ github.event.inputs.version }}
+        name: "${{ env.PROJECT_NAME }} ${{ github.event.inputs.version }} (手动构建)"
+        body: |
+          ## 手动构建版本
+          
+          **构建信息:**
+          - 版本: ${{ github.event.inputs.version }}
+          - 环境: ${{ github.event.inputs.environment }}
+          - 触发者: ${{ github.actor }}
+          - 时间: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
+          
+          **说明:**
+          ${{ github.event.inputs.description }}
+          
+          **下载文件:**
+          - `${{ env.PROJECT_NAME }}-${{ github.event.inputs.version }}-*.7z`
+          - `${{ env.PROJECT_NAME }}-${{ github.event.inputs.version }}-*.7z.sha256`
+          
+          **注意:**
+          此版本为手动构建，用于测试或紧急发布。
+        draft: ${{ github.event.inputs.environment == 'staging' }}
+        prerelease: ${{ github.event.inputs.environment == 'staging' }}
+        files: |
+          ${{ env.PROJECT_NAME }}-${{ github.event.inputs.version }}-*.7z
+          ${{ env.PROJECT_NAME }}-${{ github.event.inputs.version }}-*.7z.sha256
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
