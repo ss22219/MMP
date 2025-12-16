@@ -19,7 +19,7 @@ namespace MMP.States
 
             if(LastGuid == ocrResult.Id)
             {
-                await context.DelayAsync(500, ct);
+                await context.DelayAsync(1000, ct);
                 return;
             }
             LastGuid = ocrResult.Id;
@@ -38,7 +38,10 @@ namespace MMP.States
 
             if (targetBtn != null)
             {
-                context.Controller.Click((int)targetBtn.Center.X, (int)targetBtn.Center.Y + 5);
+                var offset = 0;
+                if(targetBtn.Text == "坠入深渊")
+                    offset = 20;
+                context.Controller.Click((int)targetBtn.Center.X, (int)targetBtn.Center.Y + offset);
                 await context.DelayAsync(1000, ct);
             }
 
