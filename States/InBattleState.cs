@@ -184,10 +184,40 @@ namespace MMP.States
                     // 调整视角对准怪物
                     await context.AdjustCameraToTargetAsync(nearestMonster.Position, ct);
 
-                    // 向前移动2秒
+                    // 开始移动
                     context.Controller.SendKeyDown("W");
                     context.Controller.SendKeyDown("LSHIFT");
-                    await context.DelayAsync(2000, ct);
+                    
+                    // 每200ms检查一次距离，最多移动2秒
+                    for (int i = 0; i < 10; i++) // 2000ms / 200ms = 10次
+                    {
+                        await context.DelayAsync(200, ct);
+                        
+                        // 刷新怪物位置并重新计算距离
+                        context.BattleApi.RefreshEntityPosition(nearestMonster);
+                        if (nearestMonster.AlreadyDead)
+                        {
+                            Console.WriteLine($"  ✓ 怪物已死亡，停止移动");
+                            break;
+                        }
+                        
+                        var currentCameraLoc = context.BattleApi.GetCameraLocation();
+                        float currentDistance = CalculateDistance(currentCameraLoc, nearestMonster.Position);
+                        
+                        // 如果已经足够接近，停止移动
+                        if (currentDistance <= approachDistance)
+                        {
+                            Console.WriteLine($"  ✓ 已接近目标 ({currentDistance / 100:F1}米 <= {approachDistance / 100:F0}米)，停止移动");
+                            break;
+                        }
+                        
+                        // 每400ms调整一次视角（每2次循环）
+                        if (i % 2 == 0)
+                        {
+                            await context.AdjustCameraToTargetAsync(nearestMonster.Position, ct);
+                        }
+                    }
+                    
                     context.Controller.SendKeyUp("LSHIFT");
                     context.Controller.SendKeyUp("W");
 
