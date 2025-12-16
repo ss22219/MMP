@@ -1,55 +1,59 @@
-# .github/workflows/manual-release.yml
-name: Manual AOT Release
+name: Manual Release by Tag
 
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: '版本号 (格式: v1.2.3)'
+      tag_name:
+        description: '必须选择一个已存在的 Git 标签 (例如 v1.2.7)'
         required: true
-        default: 'v1.0.0'
-      description:
-        description: '发布说明'
-        required: false
-        default: '手动构建版本'
+        default: 'v1.2.7'
+        type: string
       environment:
-        description: '目标环境'
+        description: '发布环境'
         required: true
         default: 'staging'
         type: choice
         options:
           - staging
           - production
-          
+
 env:
   DOTNET_VERSION: '10.0.x'
   PROJECT_NAME: 'MMP'
-  
+
 jobs:
   manual-release:
     runs-on: windows-latest
     environment: ${{ github.event.inputs.environment }}
     permissions:
       contents: write
-      
+
     steps:
-    - name: Display inputs
-      run: |
-        echo "版本号: ${{ github.event.inputs.version }}"
-        echo "环境: ${{ github.event.inputs.environment }}"
-        echo "说明: ${{ github.event.inputs.description }}"
-        echo "触发者: ${{ github.actor }}"
-        
-    - name: Checkout code
+    - name: Checkout the specific Tag
       uses: actions/checkout@v4
       with:
-        ref: master
-        
+        ref: refs/tags/${{ github.event.inputs.tag_name }}
+
+    - name: Get Tag Message for Release Notes
+      id: get_tag_message
+      shell: bash
+      run: |
+        # 获取该标签的说明信息，如果为空则设置一个默认描述
+        TAG_MESSAGE=$(git tag -l --format='%(contents)' "${{ github.event.inputs.tag_name }}" | head -n 20)  # 取前20行避免过长
+        if [ -z "$TAG_MESSAGE" ]; then
+          TAG_MESSAGE="Release ${{ github.event.inputs.tag_name }} (No detailed tag message provided)."
+        fi
+        # 多行文本需要特殊处理
+        TAG_MESSAGE="${TAG_MESSAGE//'%'/'%25'}"
+        TAG_MESSAGE="${TAG_MESSAGE//$'\n'/'%0A'}"
+        TAG_MESSAGE="${TAG_MESSAGE//$'\r'/'%0D'}"
+        echo "tag_message=$TAG_MESSAGE" >> $GITHUB_OUTPUT
+
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
-        
+
     - name: Build with AOT
       run: |
         dotnet publish .\MMP.csproj `
@@ -60,46 +64,29 @@ jobs:
           -p:PublishTrimmed=true `
           -p:PublishAot=true `
           -o ./publish
-          
-    - name: Create 7z package
+
+    - name: Create 7z Package
       shell: pwsh
       run: |
-        $version = "${{ github.event.inputs.version }}"
+        $tag = "${{ github.event.inputs.tag_name }}"
         $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-        $archiveName = "${{ env.PROJECT_NAME }}-$version-$timestamp-win-x64.7z"
-        
+        $archiveName = "${{ env.PROJECT_NAME }}-$tag-$timestamp-win-x64.7z"
         7z a -t7z -mx=9 "$archiveName" "./publish/*"
-        
-        # 生成校验文件
         (Get-FileHash "$archiveName" -Algorithm SHA256).Hash | Out-File "$archiveName.sha256"
-        
-    - name: Upload to GitHub Releases
+
+    - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: ${{ github.event.inputs.version }}
-        name: "${{ env.PROJECT_NAME }} ${{ github.event.inputs.version }} (手动构建)"
-        body: |
-          ## 手动构建版本
-          
-          **构建信息:**
-          - 版本: ${{ github.event.inputs.version }}
-          - 环境: ${{ github.event.inputs.environment }}
-          - 触发者: ${{ github.actor }}
-          - 时间: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
-          
-          **说明:**
-          ${{ github.event.inputs.description }}
-          
-          **下载文件:**
-          - `${{ env.PROJECT_NAME }}-${{ github.event.inputs.version }}-*.7z`
-          - `${{ env.PROJECT_NAME }}-${{ github.event.inputs.version }}-*.7z.sha256`
-          
-          **注意:**
-          此版本为手动构建，用于测试或紧急发布。
+        # 使用输入的标签名作为发布标签
+        tag_name: ${{ github.event.inputs.tag_name }}
+        name: "${{ env.PROJECT_NAME }} ${{ github.event.inputs.tag_name }}"
+        # 使用从Git标签获取的说明作为发布正文
+        body: ${{ steps.get_tag_message.outputs.tag_message }}
         draft: ${{ github.event.inputs.environment == 'staging' }}
         prerelease: ${{ github.event.inputs.environment == 'staging' }}
+        generate_release_notes: false # 使用自定义body，所以关闭自动生成
         files: |
-          ${{ env.PROJECT_NAME }}-${{ github.event.inputs.version }}-*.7z
-          ${{ env.PROJECT_NAME }}-${{ github.event.inputs.version }}-*.7z.sha256
+          ${{ env.PROJECT_NAME }}-${{ github.event.inputs.tag_name }}-*.7z
+          ${{ env.PROJECT_NAME }}-${{ github.event.inputs.tag_name }}-*.7z.sha256
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
