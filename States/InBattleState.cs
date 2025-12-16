@@ -81,11 +81,12 @@ namespace MMP.States
 
                 if (monsters.Count == 0)
                 {
-                    // 没有怪物时，重置技能计数
-                    if (_skillECount > 0)
+                    // 没有怪物时，重置所有技能计数和计时
+                    if (_skillECount > 0 || _lastSkillTime != DateTime.MinValue)
                     {
-                        Console.WriteLine($"  → 没有怪物，重置E技能计数 ({_skillECount} → 0)");
+                        Console.WriteLine($"  → 没有怪物，重置技能状态 (E计数: {_skillECount} → 0, 清空技能计时)");
                         _skillECount = 0;
+                        _lastSkillTime = DateTime.MinValue;
                     }
                     // 优先使用 BattlePoints 中的 Boss 战斗点
                     var battlePoints = context.BattleApi.GetBattlePoints();
@@ -314,11 +315,29 @@ namespace MMP.States
                 context.Controller.MouseUp(-1, -1, "right");
             }
             
-            // 状态转换时重置技能计数
+            // 状态转换时重置所有技能计数、计时和怪物状态
+            bool hasReset = false;
             if (_skillECount > 0)
             {
                 Console.WriteLine($"  [清理] 重置E技能计数 ({_skillECount} → 0)");
                 _skillECount = 0;
+                hasReset = true;
+            }
+            if (_lastSkillTime != DateTime.MinValue)
+            {
+                Console.WriteLine($"  [清理] 重置技能计时");
+                _lastSkillTime = DateTime.MinValue;
+                hasReset = true;
+            }
+            if (_monsterStuckCount.Count > 0)
+            {
+                Console.WriteLine($"  [清理] 清空怪物卡住计数 ({_monsterStuckCount.Count}个记录)");
+                _monsterStuckCount.Clear();
+                hasReset = true;
+            }
+            if (hasReset)
+            {
+                Console.WriteLine($"  [清理] 战斗状态完全重置");
             }
         }
 
