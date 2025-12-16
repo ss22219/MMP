@@ -61,7 +61,7 @@ namespace MMP.States
                 int startY = winHeight - 50;  // 底部留一点边距
                 int endY = winHeight / 2;  // 中间
                 int totalDistance = startY - endY;
-                int steps = 5;  // 5步，每步20%
+                int steps = 10;  // 5步，每步20%
                 int stepDistance = totalDistance / steps;
                 
                 Console.WriteLine($"  → 快速点击操作：从窗口2/3位置({clickX}, {startY})向上点击到({clickX}, {endY})");
