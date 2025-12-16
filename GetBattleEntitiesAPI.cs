@@ -218,8 +218,8 @@ public class BattleEntitiesAPI
     private IntPtr moduleBase;
     private IntPtr gNamesAddress;
     private OffsetFinder? offsetFinder;
-    
-    // 实体缓存（100ms）
+
+    // 实体缓存（200ms，Boss 实体不缓存）
     private List<EntityInfo>? _cachedEntities = null;
     private DateTime _lastCacheTime = DateTime.MinValue;
     private const int CACHE_DURATION_MS = 200;
@@ -245,7 +245,7 @@ public class BattleEntitiesAPI
 
         // 初始化偏移（只在第一个实例时执行）
         InitializeOffsets(processName);
-        
+
         gNamesAddress = new IntPtr(moduleBase.ToInt64() + GNAMES_OFFSET);
     }
 
@@ -459,7 +459,7 @@ public class BattleEntitiesAPI
         try
         {
             int nameIndex = ReadInt32(new IntPtr(objectPtr.ToInt64() + UOBJECT_NAME));
-            if(nameIndex == 0) return "Invalid";
+            if (nameIndex == 0) return "Invalid";
             int chunkOffset = nameIndex >> 16;
             int nameOffset = nameIndex & 0xFFFF;
 
@@ -600,7 +600,7 @@ public class BattleEntitiesAPI
                 break;
 
             hierarchy.Add(className);
-            
+
             // 如果已经找到 Actor，可以提前退出（优化）
             if (className == "Actor" || className == "AActor")
                 break;
@@ -695,7 +695,78 @@ public class BattleEntitiesAPI
         _lastCacheTime = DateTime.MinValue;
     }
 
-    // 主API：获取 Battle.Entities（带100ms缓存）
+
+
+
+
+    /// <summary>
+    /// 刷新单个实体的位置信息
+    /// </summary>
+    /// <param name="entity">要刷新的实体</param>
+    public void RefreshEntityPosition(EntityInfo entity)
+    {
+        if (!entity.IsActor) return;
+
+        try
+        {
+            entity.Position = GetActorPosition(entity.EntityPtr);
+            if (entity.ClassName.StartsWith("BP_Mon_") || entity.ClassName.StartsWith("BP_Boss_"))
+            {
+                try
+                {
+                    byte deadState = ReadByte(new IntPtr(entity.EntityPtr.ToInt64() + OFFSET_ALREADYDEAD));
+                    entity.AlreadyDead = deadState != 0;
+                }
+                catch
+                {
+                    entity.AlreadyDead = false;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠ 刷新实体位置失败: {entity.Name} - {ex.Message}");
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    /// <summary>
+    /// 获取 Boss 相关的 Actor（从缓存中筛选，但状态已刷新）
+    /// </summary>
+    /// <returns>Boss 相关的实体列表</returns>
+    public List<EntityInfo> GetBossEntities()
+    {
+        // 获取所有实体（会自动刷新 Boss 状态）
+        var allEntities = GetBattleEntities();
+
+        // 筛选 Boss 相关的实体
+        var bossEntities = allEntities.Where(entity =>
+            entity.IsActor && (
+                entity.ClassName.StartsWith("BP_Boss_") ||
+                entity.Name.Contains("Boss") ||
+                entity.ParentClasses.Any(c => c.Contains("Boss"))
+            )
+        ).ToList();
+
+        return bossEntities;
+    }
+
+    // 主API：获取 Battle.Entities（带200ms缓存，Boss相关实体每次刷新状态）
     public List<EntityInfo> GetBattleEntities()
     {
         // 检查缓存是否有效
@@ -704,6 +775,14 @@ public class BattleEntitiesAPI
             return _cachedEntities;
         }
 
+        return GetBattleEntitiesInternal();
+    }
+
+    /// <summary>
+    /// 内部方法：实际读取 Battle.Entities（不使用缓存）
+    /// </summary>
+    private List<EntityInfo> GetBattleEntitiesInternal()
+    {
         List<EntityInfo> entities = new List<EntityInfo>();
 
         try
@@ -773,7 +852,7 @@ public class BattleEntitiesAPI
                     if (isActor)
                     {
                         entity.Position = GetActorPosition(value);
-                        
+
                         // 如果是怪物或Boss，读取 AlreadyDead 状态
                         if (className.StartsWith("BP_Mon_") || className.StartsWith("BP_Boss_"))
                         {
@@ -800,7 +879,7 @@ public class BattleEntitiesAPI
                                 entity.IsActive = true; // 默认为激活状态
                             }
                         }
-                        
+
                         // 如果继承自 AMechanismBase，读取 CanOpen 和 OpenState 状态
                         if (entity.ParentClasses.Any(c => c.Contains("MechanismBase")))
                         {
@@ -813,7 +892,7 @@ public class BattleEntitiesAPI
                             {
                                 entity.CanOpen = true; // 默认为可打开状态
                             }
-                            
+
                             try
                             {
                                 byte openState = ReadByte(new IntPtr(value.ToInt64() + OFFSET_MECHANISM_OPENSTATE));
@@ -1098,9 +1177,9 @@ public class BattleEntitiesAPI
         var bossBattlePoints = battlePoints.Where(bp => bp.Name.Contains("Boss")).ToList();
         var playerBattlePoints = battlePoints.Where(bp => bp.Name.Contains("Player")).ToList();
         var skillBattlePoints = battlePoints.Where(bp => bp.Name.Contains("Skill")).ToList();
-        var otherBattlePoints = battlePoints.Where(bp => 
-            !bp.Name.Contains("Boss") && 
-            !bp.Name.Contains("Player") && 
+        var otherBattlePoints = battlePoints.Where(bp =>
+            !bp.Name.Contains("Boss") &&
+            !bp.Name.Contains("Player") &&
             !bp.Name.Contains("Skill")).ToList();
 
         if (bossBattlePoints.Count > 0)

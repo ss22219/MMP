@@ -40,6 +40,7 @@ namespace MMP
 
         // 防AFK线程相关
         private Thread? _antiAfkThread;
+        private bool _hasLoggedNonBattleState = false;
 
         // 组件
         private IntPtr _hwnd;
@@ -152,7 +153,8 @@ namespace MMP
                 _controller,
                 _battleApi,
                 _config,
-                GetLatestOcrResult
+                GetLatestOcrResult,
+                RequestStateTransition
             );
             Console.WriteLine("✓ 状态上下文初始化完成");
             Console.WriteLine();
@@ -281,6 +283,25 @@ namespace MMP
                 {
                     try
                     {
+                        // ========== 状态检查 ==========
+                        // 只在战斗状态时处理 AFK
+                        if (CurrentState != GameState.InBattle)
+                        {
+                            // 只在第一次进入非战斗状态时输出日志，避免日志刷屏
+                            if (!_hasLoggedNonBattleState)
+                            {
+                                Console.WriteLine($"[防AFK] 当前状态 {CurrentState}，暂停 AFK 处理（仅战斗状态启用）");
+                                _hasLoggedNonBattleState = true;
+                            }
+                            Thread.Sleep(1000); // 等待1秒后重新检查
+                            continue;
+                        }
+                        else
+                        {
+                            // 重置日志标志
+                            _hasLoggedNonBattleState = false;
+                        }
+
                         // ========== 鼠标移动检测 ==========
                         POINT currentPos = new POINT();
                         GetCursorPos(out currentPos);
@@ -337,6 +358,14 @@ namespace MMP
 
                             if (keyPressTimer >= nextKeyPressTime && _controller != null)
                             {
+                                // 只在战斗状态时发送随机按键
+                                if (CurrentState != GameState.InBattle)
+                                {
+                                    // 重置计时器但不发送按键
+                                    keyPressTimer = 0;
+                                    nextKeyPressTime = random.Next(antiDetectConfig.RandomKeyMinInterval, antiDetectConfig.RandomKeyMaxInterval + 1);
+                                    continue;
+                                }
                                 // 随机选择 1-3 个按键
                                 int keyCount = random.Next(1, 4);
                                 var selectedKeys = new List<string>();
@@ -418,6 +447,18 @@ namespace MMP
         // 当前状态的取消令牌
         private CancellationTokenSource? _currentStateCts;
         private GameState? _nextState;
+
+        /// <summary>
+        /// 状态转换请求回调（供 StateContext 使用）
+        /// </summary>
+        private void RequestStateTransition(GameState newState)
+        {
+            if (_nextState == null) // 避免重复设置
+            {
+                _nextState = newState;
+                _currentStateCts?.Cancel(); // 中断当前状态执行
+            }
+        }
 
         private async Task MainLoopAsync(CancellationToken ct)
         {

@@ -17,20 +17,109 @@ namespace MMP.States
 
         // OCR 相关
         private readonly Func<OcrEngine.OcrResult?> _getLatestOcrResult;
+        
+        // 状态转换相关
+        private readonly Action<AutoAbyssStateMachine.GameState>? _requestStateTransition;
 
         public StateContext(
             IntPtr windowHandle,
             KeyboardMouseController? controller,
             BattleEntitiesAPI? battleApi,
             AppConfig config,
-            Func<OcrEngine.OcrResult?> getLatestOcrResult)
+            Func<OcrEngine.OcrResult?> getLatestOcrResult,
+            Action<AutoAbyssStateMachine.GameState>? requestStateTransition = null)
         {
             WindowHandle = windowHandle;
             Controller = controller;
             BattleApi = battleApi;
             Config = config;
             _getLatestOcrResult = getLatestOcrResult;
+            _requestStateTransition = requestStateTransition;
         }
+
+        /// <summary>
+        /// 请求状态转换
+        /// </summary>
+        /// <param name="newState">目标状态</param>
+        /// <param name="reason">转换原因（用于日志）</param>
+        public void RequestStateTransition(AutoAbyssStateMachine.GameState newState, string? reason = null)
+        {
+            if (_requestStateTransition != null)
+            {
+                if (!string.IsNullOrEmpty(reason))
+                {
+                    Console.WriteLine($"[状态请求] 请求转换到 {newState}，原因: {reason}");
+                }
+                else
+                {
+                    Console.WriteLine($"[状态请求] 请求转换到 {newState}");
+                }
+                _requestStateTransition(newState);
+            }
+            else
+            {
+                Console.WriteLine($"[状态请求] 警告: 无法转换状态，状态转换回调未设置");
+            }
+        }
+
+        /// <summary>
+        /// 请求强制退出深渊
+        /// </summary>
+        /// <param name="reason">退出原因</param>
+        public void RequestForceExit(string reason)
+        {
+            RequestStateTransition(AutoAbyssStateMachine.GameState.ForceExiting, $"强制退出: {reason}");
+        }
+
+        /// <summary>
+        /// 请求返回主菜单
+        /// </summary>
+        /// <param name="reason">返回原因</param>
+        public void RequestReturnToMainMenu(string reason)
+        {
+            RequestStateTransition(AutoAbyssStateMachine.GameState.MainMenu, $"返回主菜单: {reason}");
+        }
+
+        /// <summary>
+        /// 请求进入战斗状态
+        /// </summary>
+        /// <param name="reason">进入战斗的原因</param>
+        public void RequestEnterBattle(string reason = "检测到战斗")
+        {
+            RequestStateTransition(AutoAbyssStateMachine.GameState.InBattle, reason);
+        }
+
+        /// <summary>
+        /// 请求进入导航状态
+        /// </summary>
+        /// <param name="reason">导航原因</param>
+        public void RequestNavigating(string reason = "开始导航")
+        {
+            RequestStateTransition(AutoAbyssStateMachine.GameState.Navigating, reason);
+        }
+
+        /// <summary>
+        /// 请求进入复苏状态
+        /// </summary>
+        /// <param name="reason">复苏原因</param>
+        public void RequestReviving(string reason = "角色死亡")
+        {
+            RequestStateTransition(AutoAbyssStateMachine.GameState.Reviving, reason);
+        }
+
+        /// <summary>
+        /// 请求关闭UI状态
+        /// </summary>
+        /// <param name="reason">关闭UI的原因</param>
+        public void RequestClosingUI(string reason = "需要关闭UI")
+        {
+            RequestStateTransition(AutoAbyssStateMachine.GameState.ClosingUI, reason);
+        }
+
+        /// <summary>
+        /// 检查是否可以请求状态转换
+        /// </summary>
+        public bool CanRequestStateTransition => _requestStateTransition != null;
 
         /// <summary>
         /// 延时等待（可被 CancellationToken 中断）
@@ -218,8 +307,9 @@ namespace MMP.States
         /// </summary>
         /// <param name="targetPos">目标位置</param>
         /// <param name="needInteract">是否需要在接近时交互</param>
+        /// <param name="forceBattleJump">是否强制使用完整二段跳（忽略距离检查）</param>
         /// <param name="ct">取消令牌</param>
-        public async Task PerformDoubleJumpAsync(FVector targetPos, bool needInteract = false, CancellationToken ct = default)
+        public async Task PerformDoubleJumpAsync(FVector targetPos, bool needInteract = false, bool forceBattleJump = false, CancellationToken ct = default)
         {
             if (BattleApi == null || Controller == null) return;
 
@@ -227,7 +317,7 @@ namespace MMP.States
             var playerPos = BattleApi.GetCameraLocation();
             float distance = CalculateDistance(playerPos, targetPos);
 
-            if (distance < Config.Movement.SimpleJumpDistance)
+            if (!forceBattleJump && distance < Config.Movement.SimpleJumpDistance)
             {
                 Console.WriteLine($"  → 距离较近 ({distance / 100:F1}米)，使用简单双跳");
                 Controller.SendKey("SPACE", 0.1);
@@ -487,7 +577,7 @@ namespace MMP.States
                         if (positionChange < 150)
                         {
                             Console.WriteLine($"  ⚠ {POSITION_CHECK_SECONDS}秒位置未改变（变化 {positionChange / 100:F1}米），执行二段跳");
-                            await PerformDoubleJumpAsync(targetPos, needInteract, ct);
+                            await PerformDoubleJumpAsync(targetPos, needInteract, forceBattleJump: true, ct);
                             await Task.Delay(500, ct);
                             await AdjustCameraToTargetAsync(targetPos, ct);
                         }
@@ -519,7 +609,7 @@ namespace MMP.States
                 if (heightDiff > Config.Movement.HeightDiffJumpThreshold)
                 {
                     Console.WriteLine($"  → 二段跳（高度差 {heightDiff / 100:F1}米）");
-                    await PerformDoubleJumpAsync(targetPos, needInteract, ct);
+                    await PerformDoubleJumpAsync(targetPos, needInteract, forceBattleJump: false, ct);
                     lastJumpTime = DateTime.Now;
                     isMoving = false;
                     return false;

@@ -25,6 +25,8 @@ namespace MMP
             // 检测主菜单特征
             bool hasMainMenu = ocrResult.Regions.Any(r =>
                 r.Text.Contains("坠入深渊") ||
+                r.Text.Contains("沉潜深度") ||
+                r.Text.Contains("构造之域") ||
                 r.Text.Contains("乐土之国"));
             if (hasMainMenu)
                 return GameState.MainMenu;
@@ -52,6 +54,9 @@ namespace MMP
             // 【高优先级】复苏
             if (ocrResult.Regions.Any(r => r.Text.Contains("复苏") && !r.Text.Contains("获得遗物")))
                 return GameState.Reviving;
+            // 【高优先级】探索详情
+            if (ocrResult.Regions.Any(r => r.Text.Contains("上次探索过") || r.Text.Contains("放弃")|| r.Text.Contains("选择1枚")))
+                return GameState.SelectingRelic;
 
             // 【高优先级】探索详情
             if (ocrResult.Regions.Any(r => r.Text.Contains("探索详情")))
@@ -88,6 +93,10 @@ namespace MMP
 
                     if (hasFireMechanism)
                     {
+                        hasUIToClose = ocrResult.Regions.Any(r => r.Text.Contains("确定") );
+                        if (hasUIToClose)
+                            return GameState.ClosingUI;
+
                         return GameState.InteractingFireMechanism;
                     }
                 }
@@ -220,6 +229,10 @@ namespace MMP
                 if (currentState != GameState.MainMenu)
                     return GameState.MainMenu;
             }
+
+            hasUIToClose = ocrResult.Regions.Any(r => r.Text.Contains("确定") );
+            if (hasUIToClose)
+                return GameState.ClosingUI;
 
             // 没有检测到状态变化
             return null;

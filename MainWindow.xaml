@@ -291,61 +291,68 @@
                             <TextBlock Text="战斗配置" FontSize="18" FontWeight="Bold" 
                                        Foreground="#333" Margin="0,0,0,15"/>
                         
-                        <Grid ColumnDefinitions="200,120,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+                        <Grid ColumnDefinitions="200,120,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                             <TextBlock Grid.Row="0" Grid.Column="0" Text="怪物检测距离:" 
                                        FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
                             <TextBox Grid.Row="0" Grid.Column="1" Name="MonsterDetectionRangeTextBox" 
                                      Height="32" Margin="10,8" Classes="modern"/>
-                            <TextBlock Grid.Row="0" Grid.Column="2" Text="检测范围 (30000 = 300米)" 
+                            <TextBlock Grid.Row="0" Grid.Column="2" Text="普通怪物检测范围 (30000 = 300米)" 
                                        FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
 
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="靠近距离阈值:" 
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Boss 靠近距离:" 
                                        FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
-                            <TextBox Grid.Row="1" Grid.Column="1" Name="ApproachDistanceTextBox" 
+                            <TextBox Grid.Row="1" Grid.Column="1" Name="BossApproachDistanceTextBox" 
                                      Height="32" Margin="10,8" Classes="modern"/>
-                            <TextBlock Grid.Row="1" Grid.Column="2" Text="开始攻击的距离 (3000 = 30米)" 
+                            <TextBlock Grid.Row="1" Grid.Column="2" Text="Boss 专用靠近距离 (2000 = 20米)" 
+                                       FontSize="11" Foreground="#FF5722" VerticalAlignment="Center"/>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="靠近距离阈值:" 
+                                       FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
+                            <TextBox Grid.Row="2" Grid.Column="1" Name="ApproachDistanceTextBox" 
+                                     Height="32" Margin="10,8" Classes="modern"/>
+                            <TextBlock Grid.Row="2" Grid.Column="2" Text="开始攻击的距离 (3000 = 30米)" 
                                        FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
 
-                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Q 技能间隔 (毫秒):" 
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Q 技能间隔 (毫秒):" 
                                        FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
-                            <TextBox Grid.Row="2" Grid.Column="1" Name="QSkillIntervalTextBox" 
+                            <TextBox Grid.Row="3" Grid.Column="1" Name="QSkillIntervalTextBox" 
                                      Height="32" Margin="10,8" Classes="modern"/>
-                            <TextBlock Grid.Row="2" Grid.Column="2" Text="释放 Q 技能的时间间隔" 
+                            <TextBlock Grid.Row="3" Grid.Column="2" Text="释放 Q 技能的时间间隔" 
                                        FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
 
-                            <TextBlock Grid.Row="3" Grid.Column="0" Text="E 技能次数:" 
+                            <TextBlock Grid.Row="4" Grid.Column="0" Text="E 技能次数:" 
                                        FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
-                            <TextBox Grid.Row="3" Grid.Column="1" Name="ESkillCountTextBox" 
+                            <TextBox Grid.Row="4" Grid.Column="1" Name="ESkillCountTextBox" 
                                      Height="32" Margin="10,8" Classes="modern"/>
-                            <TextBlock Grid.Row="3" Grid.Column="2" Text="Q 技能后连续释放 E 的次数" 
+                            <TextBlock Grid.Row="4" Grid.Column="2" Text="Q 技能后连续释放 E 的次数" 
                                        FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
 
-                            <TextBlock Grid.Row="4" Grid.Column="0" Text="E 技能间隔 (毫秒):" 
+                            <TextBlock Grid.Row="5" Grid.Column="0" Text="E 技能间隔 (毫秒):" 
                                        FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
-                            <TextBox Grid.Row="4" Grid.Column="1" Name="ESkillIntervalTextBox" 
+                            <TextBox Grid.Row="5" Grid.Column="1" Name="ESkillIntervalTextBox" 
                                      Height="32" Margin="10,8" Classes="modern"/>
-                            <TextBlock Grid.Row="4" Grid.Column="2" Text="释放 E 技能的时间间隔" 
+                            <TextBlock Grid.Row="5" Grid.Column="2" Text="释放 E 技能的时间间隔" 
                                        FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
 
-                            <TextBlock Grid.Row="5" Grid.Column="0" Text="攻击间隔 (毫秒):" 
+                            <TextBlock Grid.Row="6" Grid.Column="0" Text="攻击间隔 (毫秒):" 
                                        FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
-                            <TextBox Grid.Row="5" Grid.Column="1" Name="AttackIntervalTextBox" 
+                            <TextBox Grid.Row="6" Grid.Column="1" Name="AttackIntervalTextBox" 
                                      Height="32" Margin="10,8" Classes="modern"/>
-                            <TextBlock Grid.Row="5" Grid.Column="2" Text="普通攻击的时间间隔" 
+                            <TextBlock Grid.Row="6" Grid.Column="2" Text="普通攻击的时间间隔" 
                                        FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
 
-                            <TextBlock Grid.Row="6" Grid.Column="0" Text="每轮攻击次数:" 
+                            <TextBlock Grid.Row="7" Grid.Column="0" Text="每轮攻击次数:" 
                                        FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
-                            <TextBox Grid.Row="6" Grid.Column="1" Name="AttackCountTextBox" 
+                            <TextBox Grid.Row="7" Grid.Column="1" Name="AttackCountTextBox" 
                                      Height="32" Margin="10,8" Classes="modern"/>
-                            <TextBlock Grid.Row="6" Grid.Column="2" Text="每轮连续攻击的次数" 
+                            <TextBlock Grid.Row="7" Grid.Column="2" Text="每轮连续攻击的次数" 
                                        FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
                             
-                            <TextBlock Grid.Row="7" Grid.Column="0" Text="攻击后摇间隔 (毫秒):" 
+                            <TextBlock Grid.Row="8" Grid.Column="0" Text="攻击后摇间隔 (毫秒):" 
                                        FontSize="13" VerticalAlignment="Center" Margin="0,8"/>
-                            <TextBox Grid.Row="7" Grid.Column="1" Name="AttackRecoveryDelayTextBox" 
+                            <TextBox Grid.Row="8" Grid.Column="1" Name="AttackRecoveryDelayTextBox" 
                                      Height="32" Margin="10,8" Classes="modern"/>
-                            <TextBlock Grid.Row="7" Grid.Column="2" Text="每次攻击后的恢复等待时间" 
+                            <TextBlock Grid.Row="8" Grid.Column="2" Text="每次攻击后的恢复等待时间" 
                                        FontSize="11" Foreground="#999" VerticalAlignment="Center"/>
                         </Grid>
                         </StackPanel>

@@ -44,11 +44,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- 编译时自动复制 models 目录到输出目录 -->
-    <None Include="models\**\*" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
-
-  <ItemGroup>
     <!-- 排除 test_simple 目录中的所有 .cs 文件 -->
     <Compile Remove="OcrEngine.cs" />
     <Compile Remove="test_simple\**\*.cs" />

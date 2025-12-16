@@ -50,6 +50,7 @@ public partial class MainWindow : Window
     private TextBox ForceExitHotkeyTextBox = null!;
     private TextBox StateTimeoutTextBox = null!;
     private TextBox MonsterDetectionRangeTextBox = null!;
+    private TextBox BossApproachDistanceTextBox = null!;
     private TextBox ApproachDistanceTextBox = null!;
     private TextBox QSkillIntervalTextBox = null!;
     private TextBox ESkillCountTextBox = null!;
@@ -110,6 +111,7 @@ public partial class MainWindow : Window
         ForceExitHotkeyTextBox = this.FindControl<TextBox>("ForceExitHotkeyTextBox")!;
         StateTimeoutTextBox = this.FindControl<TextBox>("StateTimeoutTextBox")!;
         MonsterDetectionRangeTextBox = this.FindControl<TextBox>("MonsterDetectionRangeTextBox")!;
+        BossApproachDistanceTextBox = this.FindControl<TextBox>("BossApproachDistanceTextBox")!;
         ApproachDistanceTextBox = this.FindControl<TextBox>("ApproachDistanceTextBox")!;
         QSkillIntervalTextBox = this.FindControl<TextBox>("QSkillIntervalTextBox")!;
         ESkillCountTextBox = this.FindControl<TextBox>("ESkillCountTextBox")!;
@@ -240,6 +242,7 @@ public partial class MainWindow : Window
         // 加载战斗配置
         var battle = _config.Battle;
         MonsterDetectionRangeTextBox.Text = battle.MonsterDetectionRange.ToString();
+        BossApproachDistanceTextBox.Text = battle.BossApproachDistance.ToString();
         ApproachDistanceTextBox.Text = battle.ApproachDistance.ToString();
         QSkillIntervalTextBox.Text = battle.QSkillInterval.ToString();
         ESkillCountTextBox.Text = battle.ESkillCount.ToString();
@@ -296,6 +299,7 @@ public partial class MainWindow : Window
 
             // 保存战斗配置
             _config.Battle.MonsterDetectionRange = float.Parse(MonsterDetectionRangeTextBox.Text ?? "30000");
+            _config.Battle.BossApproachDistance = float.Parse(BossApproachDistanceTextBox.Text ?? "2000");
             _config.Battle.ApproachDistance = float.Parse(ApproachDistanceTextBox.Text ?? "3000");
             _config.Battle.QSkillInterval = int.Parse(QSkillIntervalTextBox.Text ?? "5000");
             _config.Battle.ESkillCount = int.Parse(ESkillCountTextBox.Text ?? "3");

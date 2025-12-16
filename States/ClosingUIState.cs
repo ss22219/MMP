@@ -10,12 +10,22 @@ namespace MMP.States
     /// 处理各种弹窗和提示界面
     /// </summary>
     public class ClosingUIState : IStateHandler
-    {
+    {        
+        private static Guid LastGuid = Guid.NewGuid();
+
         public async Task ExecuteAsync(StateContext context, OcrEngine.OcrResult? ocrResult, CancellationToken ct)
         {
             if (ocrResult == null || context.Controller == null)
                 return;
 
+            if (ocrResult == null || context.Controller == null)
+                return;
+
+            if(LastGuid == ocrResult.Id)
+            {
+                await context.DelayAsync(500, ct);
+                return;
+            }
             Console.WriteLine("[关闭UI]");
 
             // 检测需要关闭的 UI 文字
@@ -39,15 +49,23 @@ namespace MMP.States
                 var uiText = string.Join(", ", detectedUI.Select(r => r.Text).Take(3));
                 Console.WriteLine($"  → 检测到: {uiText}");
 
-                if(uiText.Contains("探索完成"))
-                await context.DelayAsync(1500, ct);
+                if (uiText.Contains("探索完成"))
+                    await context.DelayAsync(1500, ct);
                 // 点击右上角关闭
                 var (winWidth, winHeight) = WindowHelper.GetWindowSize(context.WindowHandle);
                 context.Controller.Click(winWidth - 70, 50);
-                
+
                 await context.DelayAsync(500, ct);
-                
+
                 Console.WriteLine("  ✓ 已点击右上角");
+            }
+            else if (ocrResult.Regions.Any(r => r.Text.Contains("确定")))
+            {
+                var targetBtn = ocrResult.Regions.FirstOrDefault(r => r.Text.Contains("确定"));
+
+                if (targetBtn != null)
+                    context.Controller.Click((int)targetBtn.Center.X, (int)targetBtn.Center.Y);
+                await context.DelayAsync(500, ct);
             }
             else
             {

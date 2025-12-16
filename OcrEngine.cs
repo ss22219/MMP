@@ -21,6 +21,16 @@ namespace MMP
         public class OcrResult
         {
             /// <summary>
+            /// 本次识别的唯一标识符
+            /// </summary>
+            public Guid Id { get; set; } = Guid.NewGuid();
+
+            /// <summary>
+            /// 识别时间戳
+            /// </summary>
+            public DateTime Timestamp { get; set; } = DateTime.Now;
+
+            /// <summary>
             /// 识别到的文本区域列表
             /// </summary>
             public List<OcrTextRegion> Regions { get; set; } = [];
@@ -34,6 +44,11 @@ namespace MMP
             /// 识别到的文本数量
             /// </summary>
             public int Count => Regions.Count;
+
+            /// <summary>
+            /// 获取简短的 ID 用于日志显示（前8位）
+            /// </summary>
+            public string ShortId => Id.ToString("N")[..8];
         }
 
         /// <summary>
@@ -41,6 +56,12 @@ namespace MMP
         /// </summary>
         public class OcrTextRegion
         {
+            /// <summary>
+            /// 文本区域的唯一标识符
+            /// </summary>
+            public Guid Id { get; set; } = Guid.NewGuid();
+            
+
             /// <summary>
             /// 识别的文本
             /// </summary>
@@ -60,6 +81,11 @@ namespace MMP
             /// 边界框的四个顶点
             /// </summary>
             public SKPoint[] BoundingBox { get; set; } = [];
+
+            /// <summary>
+            /// 获取简短的 ID 用于日志显示（前8位）
+            /// </summary>
+            public string ShortId => Id.ToString("N")[..8];
         }
 
         /// <summary>

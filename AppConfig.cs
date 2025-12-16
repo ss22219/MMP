@@ -115,6 +115,7 @@ namespace MMP
     {
         public float MonsterDetectionRange { get; set; } = 30000;
         public float ApproachDistance { get; set; } = 3000;
+        public float BossApproachDistance { get; set; } = 2000; // Boss 靠近距离，默认 20 米
         
         // Q 技能配置
         public int QSkillInterval { get; set; } = 1000;
