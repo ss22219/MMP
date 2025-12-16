@@ -1,0 +1,175 @@
+name: Auto Release on Tag Push
+
+on:
+  push:
+    tags:
+      - 'v*'  # 匹配所有 v 开头的标签，如 v1.0.0, v2.3.1
+      - 'release-*'  # 也可以匹配 release- 开头的标签
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  PROJECT_NAME: 'MMP'
+
+jobs:
+  validate-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      tag_name: ${{ steps.extract_tag.outputs.tag_name }}
+      is_prerelease: ${{ steps.check_prerelease.outputs.is_prerelease }}
+    steps:
+      - name: Extract tag name
+        id: extract_tag
+        run: echo "tag_name=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        
+      - name: Check if tag is prerelease
+        id: check_prerelease
+        run: |
+          if [[ "${{ steps.extract_tag.outputs.tag_name }}" =~ -(alpha|beta|rc|dev|test) ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          fi
+
+  build-aot:
+    needs: validate-tag
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code with tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate-tag.outputs.tag_name }}
+          fetch-depth: 0  # 获取完整历史，用于生成变更日志
+
+      - name: Get Tag Message for Release Notes
+        id: get_tag_message
+        shell: bash
+        run: |
+          # 获取该标签的说明信息
+          TAG_MESSAGE=$(git tag -l --format='%(contents)' "${{ needs.validate-tag.outputs.tag_name }}" | head -n 50)
+          if [ -z "$TAG_MESSAGE" ]; then
+            # 如果没有标签信息，尝试获取最近的提交记录
+            TAG_MESSAGE=$(git log --oneline -n 20 --graph --decorate)
+            if [ -z "$TAG_MESSAGE" ]; then
+              TAG_MESSAGE="Release ${{ needs.validate-tag.outputs.tag_name }}"
+            fi
+          fi
+          # 多行文本处理
+          TAG_MESSAGE="${TAG_MESSAGE//'%'/'%25'}"
+          TAG_MESSAGE="${TAG_MESSAGE//$'\n'/'%0A'}"
+          TAG_MESSAGE="${TAG_MESSAGE//$'\r'/'%0D'}"
+          echo "tag_message=$TAG_MESSAGE" >> $GITHUB_OUTPUT
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build with AOT
+        run: |
+          dotnet publish .\MMP.csproj `
+            -r win-x64 `
+            -c Release `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:PublishTrimmed=true `
+            -p:PublishAot=true `
+            -p:DebugType=None `
+            -p:DebugSymbols=false `
+            -p:EnableCompressionInSingleFile=true `
+            -p:OptimizationPreference=Speed `
+            -p:IncludeAllContentForSelfExtract=true `
+            -p:InvariantGlobalization=true `
+            --output ./publish
+
+      - name: Create 7z Package
+        shell: pwsh
+        run: |
+          $tag = "${{ needs.validate-tag.outputs.tag_name }}"
+          $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+          $archiveName = "${{ env.PROJECT_NAME }}-$tag-win-x64.7z"
+          
+          # 创建版本信息文件
+          $versionInfo = @"
+Version: $tag
+Build Time: $timestamp
+Commit: ${{ github.sha }}
+.NET Version: ${{ env.DOTNET_VERSION }}
+"@
+          $versionInfo | Out-File -FilePath "./publish/version.txt" -Encoding UTF8
+          
+          # 使用 7z 压缩
+          7z a -t7z -mx=9 -m0=lzma2 -mmt=on "$archiveName" "./publish/*"
+          
+          # 生成校验和
+          (Get-FileHash "$archiveName" -Algorithm SHA256).Hash | Out-File "$archiveName.sha256"
+          (Get-FileHash "$archiveName" -Algorithm SHA512).Hash | Out-File "$archiveName.sha512"
+          
+          # 显示压缩包信息
+          $archiveInfo = Get-Item "$archiveName"
+          echo "Archive size: $($archiveInfo.Length) bytes"
+
+      - name: Generate Changelog (Optional)
+        id: changelog
+        shell: bash
+        run: |
+          # 尝试生成从上一个标签到当前标签的变更日志
+          # 获取上一个标签
+          PREV_TAG=$(git describe --tags --abbrev=0 ${{ needs.validate-tag.outputs.tag_name }}^ 2>/dev/null || echo "")
+          
+          if [ -n "$PREV_TAG" ]; then
+            echo "Previous tag: $PREV_TAG"
+            CHANGELOG=$(git log --oneline --graph --decorate "$PREV_TAG..${{ needs.validate-tag.outputs.tag_name }}" | head -n 100)
+            echo "changelog<<EOF" >> $GITHUB_OUTPUT
+            echo "## Changes since $PREV_TAG" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo '```' >> $GITHUB_OUTPUT
+            echo "$CHANGELOG" >> $GITHUB_OUTPUT
+            echo '```' >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "changelog=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.validate-tag.outputs.tag_name }}
+          name: "${{ env.PROJECT_NAME }} ${{ needs.validate-tag.outputs.tag_name }}"
+          body: |
+            ${{ steps.get_tag_message.outputs.tag_message }}
+            
+            ${{ steps.changelog.outputs.changelog }}
+            
+            ## 📦 发布包信息
+            
+            **文件列表:**
+            - `${{ env.PROJECT_NAME }}-${{ needs.validate-tag.outputs.tag_name }}-win-x64.7z` - 主程序压缩包
+            - `${{ env.PROJECT_NAME }}-${{ needs.validate-tag.outputs.tag_name }}-win-x64.7z.sha256` - SHA256 校验和
+            - `${{ env.PROJECT_NAME }}-${{ needs.validate-tag.outputs.tag_name }}-win-x64.7z.sha512` - SHA512 校验和
+            
+            **构建信息:**
+            - .NET 版本: ${{ env.DOTNET_VERSION }}
+            - 目标平台: win-x64
+            - 编译方式: AOT (Native Ahead-of-Time)
+            - 构建时间: ${{ github.event.head_commit.timestamp || 'N/A' }}
+            
+            **使用说明:**
+            1. 下载并解压 7z 文件
+            2. 运行 `${{ env.PROJECT_NAME }}.exe`
+            
+            *此版本由 GitHub Actions 自动构建发布*
+          draft: false
+          prerelease: ${{ needs.validate-tag.outputs.is_prerelease }}
+          generate_release_notes: false
+          files: |
+            ${{ env.PROJECT_NAME }}-${{ needs.validate-tag.outputs.tag_name }}-win-x64.7z
+            ${{ env.PROJECT_NAME }}-${{ needs.validate-tag.outputs.tag_name }}-win-x64.7z.sha256
+            ${{ env.PROJECT_NAME }}-${{ needs.validate-tag.outputs.tag_name }}-win-x64.7z.sha512
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
