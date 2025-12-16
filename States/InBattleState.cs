@@ -81,6 +81,12 @@ namespace MMP.States
 
                 if (monsters.Count == 0)
                 {
+                    // 没有怪物时，重置技能计数
+                    if (_skillECount > 0)
+                    {
+                        Console.WriteLine($"  → 没有怪物，重置E技能计数 ({_skillECount} → 0)");
+                        _skillECount = 0;
+                    }
                     // 优先使用 BattlePoints 中的 Boss 战斗点
                     var battlePoints = context.BattleApi.GetBattlePoints();
                     var bossPoints = battlePoints.Where(bp => bp.Name.Contains("Boss") && !bp.Name.Contains("Skill")).ToList();
@@ -306,6 +312,13 @@ namespace MMP.States
                 context.Controller.SendKeyUp("W");
                 context.Controller.SendKeyUp("LSHIFT");
                 context.Controller.MouseUp(-1, -1, "right");
+            }
+            
+            // 状态转换时重置技能计数
+            if (_skillECount > 0)
+            {
+                Console.WriteLine($"  [清理] 重置E技能计数 ({_skillECount} → 0)");
+                _skillECount = 0;
             }
         }
 

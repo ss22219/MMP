@@ -121,7 +121,7 @@ namespace MMP
         public int QSkillInterval { get; set; } = 1000;
         
         // E 技能配置
-        public int ESkillCount { get; set; } = 4;
+        public int ESkillCount { get; set; } = 6;
         public int ESkillInterval { get; set; } = 1000;
         
         // 普通攻击配置
