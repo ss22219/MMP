@@ -178,22 +178,30 @@ namespace MMP.States
                 // 如果怪物距离太远，先移动靠近
                 if (targetDistance > approachDistance)
                 {
-                    string monsterKey = $"{nearestMonster.Name}_{nearestMonster.EntityId}";
-
-                    if (!_monsterStuckCount.ContainsKey(monsterKey))
-                        _monsterStuckCount[monsterKey] = 0;
-
-                    _monsterStuckCount[monsterKey]++;
-
-                    if (_monsterStuckCount[monsterKey] >= 3)
+                    // Boss不触发卡住逻辑，因为Boss可能需要更长时间靠近
+                    if (!isBoss)
                     {
-                        _monsterStuckCount.Clear();
-                        Console.WriteLine($"  ⚠ 怪物被卡住3次");
-                        context.RequestForceExit("怪物被卡住3次");
-                        return;
-                    }
+                        string monsterKey = $"{nearestMonster.Name}_{nearestMonster.EntityId}";
 
-                    Console.WriteLine($"  → 移动靠近 (尝试 {_monsterStuckCount[monsterKey]}/3)");
+                        if (!_monsterStuckCount.ContainsKey(monsterKey))
+                            _monsterStuckCount[monsterKey] = 0;
+
+                        _monsterStuckCount[monsterKey]++;
+
+                        if (_monsterStuckCount[monsterKey] >= 3)
+                        {
+                            _monsterStuckCount.Clear();
+                            Console.WriteLine($"  ⚠ 普通怪物被卡住3次");
+                            context.RequestForceExit("普通怪物被卡住3次");
+                            return;
+                        }
+
+                        Console.WriteLine($"  → 移动靠近 (尝试 {_monsterStuckCount[monsterKey]}/3)");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"  → 移动靠近Boss (不计入卡住检测)");
+                    }
 
                     // 调整视角对准怪物
                     await context.AdjustCameraToTargetAsync(nearestMonster.Position, ct);
