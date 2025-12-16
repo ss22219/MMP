@@ -43,7 +43,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        ref: main  # 或指定其他分支
+        ref: master: # 或s  # 或
         
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
