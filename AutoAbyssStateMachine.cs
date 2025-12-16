@@ -507,9 +507,16 @@ namespace MMP
                     // 获取最新 OCR 结果
                     var ocrResult = GetLatestOcrResult();
 
+                    // 检查是否有待处理的状态转换
+                    if (_nextState != null)
+                    {
+                        TransitionTo(_nextState.Value);
+                        _nextState = null;
+                        continue; // 立即开始新状态的执行
+                    }
+
                     // 为当前状态创建取消令牌
                     _currentStateCts = new CancellationTokenSource();
-                    _nextState = null;
 
                     // 根据当前状态执行对应逻辑
                     IStateHandler? currentHandler = null;

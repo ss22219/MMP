@@ -20,6 +20,13 @@ namespace MMP.States
             if (context.BattleApi == null || context.Controller == null)
                 return;
 
+            // 检查是否被取消（状态转换请求）
+            if (ct.IsCancellationRequested)
+            {
+                Console.WriteLine("[战斗中] 状态被取消，退出执行");
+                return;
+            }
+
             Console.WriteLine("[战斗中]");
 
             // 检查是否回到主界面
