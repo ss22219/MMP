@@ -46,11 +46,22 @@ namespace MMP.States
                 context.Controller.SendKeyUp("SPACE");
             }
             await context.DelayAsync(100, ct);
-            // 按空格键关闭
-            Console.WriteLine("  → 按空格关闭（长按2.5秒）");
-            context.Controller.SendKeyDown("SPACE");
-            await context.DelayAsync(2500, ct);
-            context.Controller.SendKeyUp("SPACE");
+            // 查找并点击"长按"文字
+            var longPressText = ocrResult.Regions.FirstOrDefault(r => r.Text.Contains("长按"));
+            if (longPressText != null)
+            {
+                Console.WriteLine("  → 点击并长按 [长按] 文字（2.5秒）");
+                context.Controller.MouseDown((int)longPressText.Center.X, (int)longPressText.Center.Y, "left");
+                await context.DelayAsync(2500, ct);
+                context.Controller.MouseUp((int)longPressText.Center.X, (int)longPressText.Center.Y, "left");
+            }
+            else
+            {
+                Console.WriteLine("  → 未找到 [长按] 文字，使用空格键关闭");
+                context.Controller.SendKeyDown("SPACE");
+                await context.DelayAsync(2500, ct);
+                context.Controller.SendKeyUp("SPACE");
+            }
         }
         
         public void Cleanup(StateContext context)
