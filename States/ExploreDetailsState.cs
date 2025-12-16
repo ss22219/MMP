@@ -51,7 +51,7 @@ namespace MMP.States
             _longPressAttempts++;
             
             // 如果已经尝试了4次长按，执行滑动操作
-            if (_longPressAttempts >= 4)
+            if (_longPressAttempts >= 3)
             {
                 Console.WriteLine($"  → 长按尝试{_longPressAttempts}次未退出，执行滑动操作");
                 var (winWidth, winHeight) = WindowHelper.GetWindowSize(context.WindowHandle);
@@ -85,14 +85,14 @@ namespace MMP.States
                 var longPressText = ocrResult.Regions.FirstOrDefault(r => r.Text.Contains("长按"));
                 if (longPressText != null)
                 {
-                    Console.WriteLine($"  → 点击并长按 [长按] 文字（2.5秒）- 尝试 {_longPressAttempts}/4");
+                    Console.WriteLine($"  → 点击并长按 [长按] 文字（2.5秒）- 尝试 {_longPressAttempts}/3");
                     context.Controller.MouseDown((int)longPressText.Center.X, (int)longPressText.Center.Y, "left");
                     await context.DelayAsync(2500, ct);
                     context.Controller.MouseUp((int)longPressText.Center.X, (int)longPressText.Center.Y, "left");
                 }
                 else
                 {
-                    Console.WriteLine($"  → 未找到 [长按] 文字，使用空格键关闭 - 尝试 {_longPressAttempts}/4");
+                    Console.WriteLine($"  → 未找到 [长按] 文字，使用空格键关闭 - 尝试 {_longPressAttempts}/3");
                     context.Controller.SendKeyDown("SPACE");
                     await context.DelayAsync(2500, ct);
                     context.Controller.SendKeyUp("SPACE");

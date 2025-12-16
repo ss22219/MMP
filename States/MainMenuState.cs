@@ -33,6 +33,7 @@ namespace MMP.States
                 || r.Text.Contains("开始探索") 
                 || r.Text.Contains("继续探索")
                 || r.Text.Contains("确定")
+                || r.Text.Contains("前往")
                 );
 
             if (targetBtn != null)
