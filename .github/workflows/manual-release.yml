@@ -39,15 +39,16 @@ jobs:
       shell: bash
       run: |
         # 获取该标签的说明信息，如果为空则设置一个默认描述
-        TAG_MESSAGE=$(git tag -l --format='%(contents)' "${{ github.event.inputs.tag_name }}" | head -n 20)  # 取前20行避免过长
+        TAG_MESSAGE=$(git tag -l --format='%(contents)' "${{ github.event.inputs.tag_name }}")
         if [ -z "$TAG_MESSAGE" ]; then
           TAG_MESSAGE="Release ${{ github.event.inputs.tag_name }} (No detailed tag message provided)."
         fi
-        # 多行文本需要特殊处理
-        TAG_MESSAGE="${TAG_MESSAGE//'%'/'%25'}"
-        TAG_MESSAGE="${TAG_MESSAGE//$'\n'/'%0A'}"
-        TAG_MESSAGE="${TAG_MESSAGE//$'\r'/'%0D'}"
-        echo "tag_message=$TAG_MESSAGE" >> $GITHUB_OUTPUT
+        # 使用heredoc方式处理多行文本，避免转义字符问题
+        {
+          echo 'tag_message<<EOF'
+          echo "$TAG_MESSAGE"
+          echo 'EOF'
+        } >> $GITHUB_OUTPUT
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
