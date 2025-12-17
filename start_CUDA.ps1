@@ -3,6 +3,33 @@
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
 
+# Version comparison function
+function Compare-Versions {
+    param(
+        [string]$version1,
+        [string]$version2
+    )
+    
+    # Remove v prefix
+    $v1 = $version1 -replace "^v", ""
+    $v2 = $version2 -replace "^v", ""
+    
+    # Split version numbers
+    $v1Parts = $v1.Split(".")
+    $v2Parts = $v2.Split(".")
+    
+    # Compare each part
+    for ($i = 0; $i -lt [Math]::Max($v1Parts.Length, $v2Parts.Length); $i++) {
+        $v1Part = if ($i -lt $v1Parts.Length) { [int]$v1Parts[$i] } else { 0 }
+        $v2Part = if ($i -lt $v2Parts.Length) { [int]$v2Parts[$i] } else { 0 }
+        
+        if ($v1Part -gt $v2Part) { return 1 }
+        if ($v1Part -lt $v2Part) { return -1 }
+    }
+    
+    return 0
+}
+
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "   MMP CUDA 自动启动脚本" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
@@ -149,33 +176,6 @@ catch {
     Write-Host "⚠ 无法检查更新: $($_.Exception.Message)" -ForegroundColor Yellow
 }
 Write-Host ""
-
-# Version comparison function
-function Compare-Versions {
-    param(
-        [string]$version1,
-        [string]$version2
-    )
-    
-    # Remove v prefix
-    $v1 = $version1 -replace "^v", ""
-    $v2 = $version2 -replace "^v", ""
-    
-    # Split version numbers
-    $v1Parts = $v1.Split(".")
-    $v2Parts = $v2.Split(".")
-    
-    # Compare each part
-    for ($i = 0; $i -lt [Math]::Max($v1Parts.Length, $v2Parts.Length); $i++) {
-        $v1Part = if ($i -lt $v1Parts.Length) { [int]$v1Parts[$i] } else { 0 }
-        $v2Part = if ($i -lt $v2Parts.Length) { [int]$v2Parts[$i] } else { 0 }
-        
-        if ($v1Part -gt $v2Part) { return 1 }
-        if ($v1Part -lt $v2Part) { return -1 }
-    }
-    
-    return 0
-}
 
 # 步骤 2: 检查 CUDA 环境
 Write-Host "步骤 2/5: 检查 CUDA 环境..." -ForegroundColor Yellow
