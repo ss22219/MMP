@@ -234,7 +234,9 @@ namespace MMP.States
             var (winWidth, winHeight) = WindowHelper.GetWindowSize(WindowHandle);
 
 
-            Controller.Move(winWidth / 2, winHeight / 2);
+            // 使用SetCursorPos移动鼠标到窗口中间
+            var windowRect = WindowHelper.GetWindowRect(WindowHandle);
+            WindowHelper.SetCursorPos(windowRect.Left + winWidth / 2, windowRect.Top + winHeight / 2);
             await Task.Delay(50, ct);
             
             for (int i = 0; i < 20; i++)
@@ -269,6 +271,8 @@ namespace MMP.States
                 mouseY = Math.Max(-MAX_MOVE, Math.Min(MAX_MOVE, mouseY));
 
                 Controller.SendMouseMove(mouseX, mouseY);
+                // 使用SetCursorPos移动鼠标到窗口中间
+                WindowHelper.SetCursorPos(windowRect.Left + winWidth / 2, windowRect.Top + winHeight / 2);
                 moveCount++;
                 await Task.Delay(10, ct);
             }

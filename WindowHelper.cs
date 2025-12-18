@@ -23,6 +23,12 @@ namespace MMP
 
         private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 
+        [DllImport("user32.dll")]
+        public static extern bool SetCursorPos(int X, int Y);
+
+        [DllImport("user32.dll")]
+        private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
         public static IntPtr FindWindow(string windowTitle)
         {
             IntPtr foundWindow = IntPtr.Zero;
@@ -127,6 +133,18 @@ namespace MMP
                 return (rect.Right - rect.Left, rect.Bottom - rect.Top);
             }
             return (1920, 1080); // 默认值
+        }
+
+        /// <summary>
+        /// 获取窗口在屏幕上的位置和大小
+        /// </summary>
+        public static RECT GetWindowRect(IntPtr hWnd)
+        {
+            if (GetWindowRect(hWnd, out RECT rect))
+            {
+                return rect;
+            }
+            return new RECT { Left = 0, Top = 0, Right = 1920, Bottom = 1080 }; // 默认值
         }
 
         public static string GetActiveWindowTitle()
