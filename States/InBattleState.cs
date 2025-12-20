@@ -187,12 +187,17 @@ namespace MMP.States
                             _monsterStuckCount[monsterKey] = 0;
 
                         _monsterStuckCount[monsterKey]++;
-
                         if (_monsterStuckCount[monsterKey] >= 3)
                         {
-                            _monsterStuckCount.Clear();
                             Console.WriteLine($"  ⚠ 普通怪物被卡住3次");
-                            context.RequestForceExit("普通怪物被卡住3次");
+                            await context.PerformDoubleJumpAsync(nearestMonster.Position, false, true, ct);
+                            return;
+                        }
+                        if (_monsterStuckCount[monsterKey] >= 6)
+                        {
+                            _monsterStuckCount.Clear();
+                            Console.WriteLine($"  ⚠ 普通怪物被卡住6次");
+                            context.RequestForceExit("普通怪物被卡住6次");
                             return;
                         }
 

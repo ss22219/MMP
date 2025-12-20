@@ -24,7 +24,8 @@ namespace MMP.States
                 (Keywords: new[] { "烛芯", "[烛芯]" }, Name: "烛芯"),
                 (Keywords: new[] { "余烬", "[余烬]" }, Name: "余烬"),
                 (Keywords: new[] { "遗物", "[遗物]" }, Name: "遗物"),
-                (Keywords: new[] { "结束奇遇", "结束", "炮台轰击", "开始游戏" }, Name: "游戏结束"),
+                (Keywords: new[] { "结束奇遇", "结束" }, Name: "游戏结束"),
+                (Keywords: new[] { "炮台轰击", "开始游戏" }, Name: "开始游戏"),
                 (Keywords: new[] { "获得" }, Name: "获得")
             };
 
