@@ -77,6 +77,7 @@ namespace MMP
 
             // 【中高优先级】簧火机关交互检测（使用 BattleAPI）
             // 簧火机关优先级高于导航，确保及时交互
+            bool hasDelivery = false;
             if (_battleApi != null)
             {
                 try
@@ -86,7 +87,7 @@ namespace MMP
 
                     // 检测100米内的簧火机关
                     bool hasFireMechanism = entities.Any(e =>
-                        ((e.Name == "BP_OpenUIMechanism_Rouge_C" && e.CanOpen && !e.OpenState) ||
+                        ((e.ClassName == "BP_OpenUIMechanism_Rouge_C" && e.CanOpen && !e.OpenState) ||
                          (e.IsActor && e.Name == "BP_Paotai_Rouge01_C")) &&
                         CalculateDistance(cameraLoc, e.Position) <= _config.Battle.ApproachDistance * 3);
 
@@ -98,6 +99,10 @@ namespace MMP
 
                         return GameState.InteractingFireMechanism;
                     }
+                    // 检测100米内的传送点
+                    hasDelivery = entities.Any(e =>
+                        e.ClassName.StartsWith("BP_RougeLikeDelivery") &&
+                        CalculateDistance(cameraLoc, e.Position) <= _config.Battle.ApproachDistance * 3);
                 }
                 catch (Exception ex)
                 {
@@ -111,7 +116,7 @@ namespace MMP
             bool hasNavigationText = navigationRegions.Any();
 
             // 如果检测到导航文字，检查是否有可导航的传送点
-            if (hasNavigationText)
+            if (hasNavigationText || hasDelivery)
             {
                 if (_battleApi != null)
                 {
